@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import PixelArt from '../components/PixelArt'
+import SignInButton from '../components/SignInButton'
 
 interface Pet {
   id: string
@@ -96,14 +97,7 @@ export default async function LandingPage() {
               </Link>
             ))}
           </div>
-          <Link
-            href="https://oodle.vercel.app"
-            target="_blank"
-            className="pixel-font text-xs px-4 py-2 border transition-all hover:opacity-80"
-            style={{ borderColor: 'var(--y)', color: 'var(--y)' }}
-          >
-            SIGN IN
-          </Link>
+          <SignInButton />
         </div>
       </nav>
 
