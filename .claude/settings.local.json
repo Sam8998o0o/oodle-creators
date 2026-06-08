@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\JASE TAN\\\\oodle-creators\\\\app\\\\gallery\" \"C:\\\\Users\\\\JASE TAN\\\\oodle-creators\\\\app\\\\p\\\\[name]\" 2>&1 || true)"
+    ]
+  }
+}

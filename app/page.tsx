@@ -1,355 +1,451 @@
 import Link from 'next/link'
-import { supabase } from '../lib/supabase'
-import PixelArt from '../components/PixelArt'
-import SignInButton from '../components/SignInButton'
+import CharacterCard from '../components/CharacterCard'
+import SignInLink from '../components/SignInLink'
 
-interface Pet {
-  id: string
-  name: string
-  pixel_data: string
-  coords: unknown
-  creator_name?: string
-  talent?: string
-}
+/* ── Mock data ────────────────────────────────────────── */
 
-interface LikeRow {
-  pet_id: string
-}
-
-async function getPreviewPets(): Promise<Pet[]> {
-  const { data } = await supabase
-    .from('pets')
-    .select('id, name, pixel_data, coords, creator_name, talent')
-    .eq('is_dead', false)
-    .order('created_at', { ascending: false })
-    .limit(6)
-  return (data ?? []) as Pet[]
-}
-
-async function getChipNames(): Promise<string[]> {
-  const { data } = await supabase
-    .from('pets')
-    .select('name')
-    .eq('is_dead', false)
-    .order('created_at', { ascending: false })
-    .limit(20)
-  return (data ?? []).map((r: { name: string }) => r.name)
-}
-
-async function getLikeCounts(petIds: string[]): Promise<Record<string, number>> {
-  if (!petIds.length) return {}
-  const { data } = await supabase.from('likes').select('pet_id').in('pet_id', petIds)
-  const counts: Record<string, number> = {}
-  for (const row of (data ?? []) as LikeRow[]) {
-    counts[row.pet_id] = (counts[row.pet_id] ?? 0) + 1
-  }
-  return counts
-}
-
-const FEATURES = [
-  { icon: '✦', title: 'CREATE', desc: 'Design your character in any style — hand-drawn, digital, AI-generated, or uploaded. Your original IP, your way.' },
-  { icon: '◈', title: 'GET DISCOVERED', desc: 'Your character gets a public profile page. Share it. Let fans find you.' },
-  { icon: '⬡', title: 'SHARE YOUR IP', desc: 'One link. Your character, bio, talent, and artwork — all in one place.' },
-  { icon: '◇', title: 'MONETIZE', desc: 'Fan tips, merch, brand deals, and subscriptions. Coming soon.' },
+const HERO_CHIPS = [
+  '🐉 Drakeling · @dragonart ❤ 2.4k',
+  '🌸 Sakura Ghost · @yuuki ❤ 1.8k',
+  '🤖 Neon Rex · @cyberdraw ❤ 3.1k',
+  '🦊 Foxy Lin · @foxworks ❤ 892',
+  '🌙 Moonshard · @lunarcreator ❤ 4.2k',
+  '🎭 Masker · @maskerdraw ❤ 671',
+  '🔥 Ember · @emberstudio ❤ 1.1k',
+  '⚡ Zappix · @zapworks ❤ 543',
 ]
 
-const MONETIZE = [
-  { icon: '♡', title: 'Fan Tips', desc: 'Let fans send you tokens directly.' },
-  { icon: '◈', title: 'Merchandise', desc: 'Print your IP on physical goods.' },
-  { icon: '◇', title: 'Brand Deals', desc: 'Connect with brands looking for IP.' },
-  { icon: '✦', title: 'Creator Subscription', desc: 'Offer exclusive content to subscribers.' },
+const MOCK_CHARACTERS = [
+  { name: 'Drakeling',    handle: 'dragonart',     likes: 2400, fans: 341, emoji: '🐉' },
+  { name: 'Sakura Ghost', handle: 'yuuki',          likes: 1800, fans: 203, emoji: '🌸' },
+  { name: 'Neon Rex',     handle: 'cyberdraw',      likes: 3100, fans: 512, emoji: '🤖' },
+  { name: 'Foxy Lin',     handle: 'foxworks',       likes: 892,  fans: 98,  emoji: '🦊' },
+  { name: 'Moonshard',    handle: 'lunarcreator',   likes: 4200, fans: 721, emoji: '🌙' },
+  { name: 'Masker',       handle: 'maskerdraw',     likes: 671,  fans: 87,  emoji: '🎭' },
+]
+
+const FEATURES = [
+  { num: '01', icon: '🎨', title: 'ANY STYLE WELCOME',   desc: 'Hand-drawn, digital, AI-generated, 3D, photography — every style has a home here.' },
+  { num: '02', icon: '🔍', title: 'GET DISCOVERED',      desc: 'Appear in the gallery, leaderboards, and search. Build your fanbase organically.' },
+  { num: '03', icon: '📢', title: 'SHARE YOUR IP',       desc: 'Get a public page, shareable link, and downloadable assets for your character.' },
+  { num: '04', icon: '💰', title: 'MONETIZE YOUR IP',    desc: 'Fan tips, merchandise drops, brand deals. Your IP, your income. (Coming Soon)' },
 ]
 
 const HOW_IT_WORKS = [
-  { step: '01', title: 'CREATE YOUR CHARACTER', desc: 'Design your original character in any style — hand-drawn, digital, AI-generated, or uploaded.' },
-  { step: '02', title: 'PUBLISH YOUR IP', desc: 'Your character automatically gets a public creator profile page.' },
-  { step: '03', title: 'GROW YOUR FOLLOWING', desc: 'Share your IP link, collect likes, and build your fan base.' },
+  { num: '01', icon: '📤', title: 'UPLOAD YOUR CHARACTER',  desc: 'Upload any image — illustration, photo, AI art, sketch. Add your character name, story, and style tags.' },
+  { num: '02', icon: '🌏', title: 'GET DISCOVERED',         desc: 'Your character appears in the public gallery instantly. Fans can like, follow, and share your IP.' },
+  { num: '03', icon: '🚀', title: 'BUILD & MONETIZE',       desc: 'Grow your fanbase. Unlock creator tools, tips, merchandise, and brand deal opportunities.' },
+]
+
+const MONETIZE = [
+  { icon: '💰', title: 'FAN TIPS',        desc: 'Fans send you tips directly' },
+  { icon: '👕', title: 'MERCHANDISE',     desc: 'Sell character merch automatically' },
+  { icon: '🤝', title: 'BRAND DEALS',     desc: 'Brands discover and license your IP' },
+  { icon: '⭐', title: 'SUBSCRIPTIONS',   desc: 'Fans subscribe for exclusive content' },
 ]
 
 const ROADMAP = [
-  { phase: 'PHASE 1', title: 'Creator Profiles', status: 'LIVE', items: ['Public IP pages', 'Creator gallery', 'Like system'] },
-  { phase: 'PHASE 2', title: 'Community', status: 'SOON', items: ['Follow creators', 'Fan comments', 'Creator feed'] },
-  { phase: 'PHASE 3', title: 'Monetization', status: 'COMING', items: ['Fan tips', 'IP licensing', 'Brand deals'] },
-  { phase: 'PHASE 4', title: 'Ecosystem', status: 'FUTURE', items: ['Merch store', 'Creator DAO', 'IP marketplace'] },
+  { label: 'LIVE',     color: '#00ff88', bg: 'rgba(0,255,136,0.06)',    items: ['Platform launch', 'Gallery', 'Creator profiles'] },
+  { label: 'BUILDING', color: '#FFE600', bg: 'rgba(255,230,0,0.04)',    items: ['Follow system', 'Search', 'Download assets'] },
+  { label: 'PLANNED',  color: '#7b7bff', bg: 'rgba(123,123,255,0.04)',  items: ['Creator badge', 'Fan tips', 'Leaderboard'] },
+  { label: 'VISION',   color: '#ff69b4', bg: 'rgba(255,105,180,0.04)', items: ['Merchandise', 'Brand deals', 'Subscriptions'] },
 ]
 
-export default async function LandingPage() {
-  const [pets, chipNames] = await Promise.all([getPreviewPets(), getChipNames()])
-  const likeCounts = await getLikeCounts(pets.map(p => p.id))
+/* ── Section divider helper ───────────────────────────── */
+const Divider = () => (
+  <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', margin: '0 24px' }} />
+)
 
+/* ── Page ─────────────────────────────────────────────── */
+
+export default function LandingPage() {
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
-      {/* NAV */}
-      <nav
-        style={{ borderBottom: '1px solid var(--border)', backdropFilter: 'blur(12px)', background: 'rgba(7,7,13,0.85)' }}
-        className="fixed top-0 left-0 right-0 z-50"
-      >
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
-          <Link href="/" className="pixel-font text-sm" style={{ color: 'var(--y)' }}>OODLE</Link>
-          <div className="hidden md:flex gap-8">
-            {[
-              { label: 'GALLERY', href: '/gallery' },
-              { label: 'CREATORS', href: '/gallery' },
-              { label: 'ROADMAP', href: '#roadmap' },
-            ].map(l => (
-              <Link key={l.label} href={l.href} className="body-font text-xs tracking-widest hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                {l.label}
-              </Link>
-            ))}
-          </div>
-          <SignInButton />
-        </div>
-      </nav>
+    <div style={{ background: '#07070d' }}>
 
-      {/* HERO */}
-      <section className="pt-32 pb-20 px-6 text-center max-w-5xl mx-auto">
-        <div
-          className="inline-block mb-6 px-4 py-2 text-xs tracking-widest body-font"
-          style={{ border: '1px solid var(--border)', color: 'var(--y)', background: 'rgba(255,230,0,0.05)' }}
-        >
-          ✦ IP CREATOR COMMUNITY PLATFORM
+      {/* ── HERO ──────────────────────────────────────────── */}
+      <section style={{
+        minHeight: 'calc(100vh - 64px)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        padding: '80px 24px 60px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Badge */}
+        <div className="fade-up delay-0" style={{
+          display: 'inline-block',
+          padding: '8px 18px',
+          border: '1px solid rgba(255,230,0,0.4)',
+          background: 'rgba(255,230,0,0.04)',
+          marginBottom: 32,
+        }}>
+          <span style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 9, color: '#FFE600', letterSpacing: 2 }}>
+            ✦ IP CHARACTER SHARING COMMUNITY
+          </span>
         </div>
-        <h1 className="pixel-font leading-relaxed mb-6" style={{ fontSize: 'clamp(18px, 3.5vw, 36px)', color: '#fff' }}>
-          BUILD YOUR<br />
-          <span style={{ color: 'var(--y)' }}>CHARACTER IP</span><br />
-          LET THE WORLD<br />
-          DISCOVER YOU
+
+        {/* H1 */}
+        <h1 className="fade-up delay-1" style={{
+          fontFamily: 'var(--font-pixel), monospace',
+          fontSize: 'clamp(20px, 4vw, 36px)',
+          lineHeight: 1.5,
+          margin: '0 0 28px',
+          maxWidth: 800,
+          background: 'linear-gradient(135deg, #ffffff 0%, #FFE600 50%, #ff69b4 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}>
+          SHARE YOUR CHARACTER IP WITH THE WORLD
         </h1>
-        <p className="body-font text-base mb-10 max-w-xl mx-auto" style={{ color: 'rgba(255,255,255,0.55)' }}>
-          Design your character in any style. Upload your original IP, build your audience, and let the world discover your creation.
+
+        {/* Subtitle */}
+        <p className="fade-up delay-2" style={{
+          fontFamily: 'var(--font-body), sans-serif',
+          fontSize: 18,
+          color: 'rgba(255,255,255,0.6)',
+          maxWidth: 580,
+          lineHeight: 1.7,
+          margin: '0 0 40px',
+        }}>
+          Upload your original character. Get discovered by fans. Build your audience. Monetize your IP.
         </p>
 
-        {chipNames.length > 0 && (
-          <div className="overflow-hidden mb-10" style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)', WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
-            <div className="flex gap-3 whitespace-nowrap w-max" style={{ animation: 'scroll 30s linear infinite' }}>
-              {[...chipNames, ...chipNames].map((name, i) => (
-                <span
-                  key={i}
-                  className="inline-block px-3 py-1 text-xs body-font"
-                  style={{ border: '1px solid var(--border)', color: 'rgba(255,255,255,0.5)', background: 'var(--card)', borderRadius: 2 }}
-                >
-                  {name}
-                </span>
-              ))}
-            </div>
+        {/* Scrolling chip row */}
+        <div className="fade-up delay-3" style={{
+          width: '100%',
+          overflow: 'hidden',
+          marginBottom: 44,
+          maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
+        }}>
+          <div className="scroll-track">
+            {[...HERO_CHIPS, ...HERO_CHIPS].map((chip, i) => (
+              <span key={i} style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                padding: '8px 18px',
+                margin: '0 8px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.03)',
+                fontFamily: 'var(--font-body), sans-serif',
+                fontSize: 14,
+                color: 'rgba(255,255,255,0.55)',
+                whiteSpace: 'nowrap',
+              }}>
+                {chip}
+              </span>
+            ))}
           </div>
-        )}
+        </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">
-          <Link
-            href="https://oodle.vercel.app"
-            target="_blank"
-            className="pixel-font text-xs px-6 py-4 transition-all hover:opacity-90"
-            style={{ background: 'var(--y)', color: '#07070d' }}
-          >
-            ✦ START BUILDING YOUR IP
+        {/* CTAs */}
+        <div className="fade-up delay-4" style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 24 }}>
+          <Link href="/create" style={{
+            fontFamily: 'var(--font-pixel), monospace',
+            fontSize: 11,
+            color: '#07070d',
+            background: '#FFE600',
+            textDecoration: 'none',
+            padding: '16px 28px',
+            letterSpacing: 1,
+            transition: 'opacity 150ms',
+          }}>
+            ✦ SHARE YOUR IP
           </Link>
-          <Link
-            href="/gallery"
-            className="pixel-font text-xs px-6 py-4 border transition-all hover:bg-white/5"
-            style={{ borderColor: 'var(--border)', color: '#fff' }}
-          >
+          <Link href="/gallery" style={{
+            fontFamily: 'var(--font-pixel), monospace',
+            fontSize: 11,
+            color: '#ffffff',
+            background: 'transparent',
+            textDecoration: 'none',
+            padding: '16px 28px',
+            border: '1px solid rgba(255,255,255,0.3)',
+            letterSpacing: 1,
+          }}>
             EXPLORE GALLERY →
           </Link>
-          <Link
-            href="https://oodle.vercel.app"
-            target="_blank"
-            className="pixel-font text-xs px-6 py-4 border transition-all hover:bg-white/5"
-            style={{ borderColor: 'var(--border)', color: 'rgba(255,255,255,0.5)' }}
-          >
-            ▶ PLAY THE GAME
-          </Link>
         </div>
+
+        {/* Sign in link — client component island */}
+        <SignInLink />
       </section>
 
-      {/* FEATURES */}
-      <section className="py-20 px-6 max-w-6xl mx-auto">
-        <h2 className="pixel-font text-center mb-12 text-sm" style={{ color: 'var(--y)' }}>WHAT IS OODLE CREATORS?</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {FEATURES.map(f => (
-            <div key={f.title} className="p-6" style={{ border: '1px solid var(--border)', background: 'var(--card)' }}>
-              <div className="pixel-font text-2xl mb-4" style={{ color: 'var(--y)' }}>{f.icon}</div>
-              <div className="pixel-font text-xs mb-3 text-white">{f.title}</div>
-              <p className="body-font text-sm" style={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>{f.desc}</p>
+      <Divider />
+
+      {/* ── FEATURES ────────────────────────────────────────── */}
+      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 0 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }} className="md:grid-cols-2 grid-cols-1">
+          {FEATURES.map((f, i) => (
+            <div key={f.num} style={{
+              padding: '40px',
+              borderRight: i % 2 === 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+              borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+            }}>
+              <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 11, color: '#FFE600', marginBottom: 20 }}>
+                {f.num}
+              </div>
+              <div style={{ fontSize: 32, marginBottom: 16 }}>{f.icon}</div>
+              <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 13, color: '#ffffff', marginBottom: 14, lineHeight: 1.6 }}>
+                {f.title}
+              </div>
+              <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 15, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, margin: 0 }}>
+                {f.desc}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* CREATOR GALLERY PREVIEW */}
-      <section className="py-20 px-6 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-12 flex-wrap gap-4">
-          <h2 className="pixel-font text-sm" style={{ color: '#fff' }}>CREATOR GALLERY</h2>
-          <Link href="/gallery" className="body-font text-sm hover:opacity-80" style={{ color: 'var(--y)' }}>
-            VIEW ALL →
-          </Link>
-        </div>
-        {pets.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {pets.map(pet => (
-              <Link
-                key={pet.id}
-                href={`/p/${encodeURIComponent(pet.name)}`}
-                className="group p-4 flex flex-col items-center gap-2 transition-all hover:scale-105"
-                style={{ border: '1px solid var(--border)', background: 'var(--card)' }}
-              >
-                <PixelArt pixelData={pet.pixel_data} coords={pet.coords as never} size={80} />
-                <span className="pixel-font text-center" style={{ fontSize: 8, color: 'var(--y)' }}>{pet.name}</span>
-                {pet.creator_name && (
-                  <span className="body-font text-xs text-center" style={{ color: 'rgba(255,255,255,0.4)' }}>{pet.creator_name}</span>
-                )}
-                <span className="body-font text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>♡ {likeCounts[pet.id] ?? 0}</span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-16 body-font" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            No pets yet.{' '}
-            <Link href="https://oodle.vercel.app" target="_blank" className="underline hover:opacity-80" style={{ color: 'var(--y)' }}>
-              Be the first!
-            </Link>
-          </div>
-        )}
-      </section>
+      <Divider />
 
-      {/* MONETIZATION */}
-      <section className="py-20 px-6 max-w-6xl mx-auto">
-        <div className="p-12" style={{ border: '1px solid var(--border)', background: 'var(--card)' }}>
-          <h2 className="pixel-font text-sm mb-3 text-center" style={{ color: 'var(--y)' }}>MONETIZE YOUR IP</h2>
-          <p className="body-font text-center mb-12" style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>
-            Own your character. Own your revenue.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {MONETIZE.map(m => (
-              <div key={m.title} className="p-5 relative" style={{ border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-                <div className="absolute top-3 right-3">
-                  <span className="body-font text-xs px-2 py-0.5" style={{ background: 'rgba(255,230,0,0.1)', color: 'var(--y)', border: '1px solid rgba(255,230,0,0.2)', fontSize: 9 }}>
-                    COMING SOON
-                  </span>
-                </div>
-                <div className="pixel-font text-xl mb-3" style={{ color: 'rgba(255,255,255,0.2)' }}>{m.icon}</div>
-                <div className="pixel-font mb-2" style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9 }}>{m.title}</div>
-                <p className="body-font text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{m.desc}</p>
-              </div>
-            ))}
+      {/* ── FEATURED CREATORS ───────────────────────────────── */}
+      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px' }}>
+        <div style={{ marginBottom: 48 }}>
+          <h2 style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 16, color: '#ffffff', margin: '0 0 12px' }}>
+            FEATURED CREATORS
+          </h2>
+          <div style={{ width: 60, height: 3, background: '#FFE600' }} />
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+          gap: 1,
+          background: 'rgba(255,255,255,0.07)',
+        }}>
+          {MOCK_CHARACTERS.map(c => (
+            <div key={c.name} style={{ background: '#07070d' }}>
+              <CharacterCard
+                characterName={c.name}
+                creatorHandle={c.handle}
+                likes={c.likes}
+                fans={c.fans}
+                isVerified
+              />
+            </div>
+          ))}
+          <div style={{ background: '#07070d' }}>
+            <CharacterCard
+              characterName="YOUR CHARACTER COULD BE HERE"
+              creatorHandle="you"
+              likes={0}
+              fans={0}
+              isCTA
+            />
           </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="py-20 px-6 max-w-6xl mx-auto">
-        <h2 className="pixel-font text-sm mb-12 text-center" style={{ color: '#fff' }}>HOW IT WORKS</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {HOW_IT_WORKS.map(s => (
-            <div key={s.step} className="text-center">
-              <div
-                className="pixel-font text-3xl mb-4 mx-auto w-16 h-16 flex items-center justify-center"
-                style={{ border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--y)' }}
-              >
-                {s.step}
+      <Divider />
+
+      {/* ── HOW IT WORKS ────────────────────────────────────── */}
+      <section id="how-it-works" style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px' }}>
+        <h2 style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 16, color: '#ffffff', margin: '0 0 48px', textAlign: 'center' }}>
+          HOW IT WORKS
+        </h2>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          border: '1px solid rgba(255,255,255,0.07)',
+        }} className="grid-cols-1 md:grid-cols-3">
+          {HOW_IT_WORKS.map((s, i) => (
+            <div key={s.num} style={{
+              padding: '40px',
+              borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none',
+            }}>
+              <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 11, color: '#FFE600', marginBottom: 16 }}>{s.num}</div>
+              <div style={{ fontSize: 32, marginBottom: 16 }}>{s.icon}</div>
+              <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 11, color: '#ffffff', marginBottom: 14, lineHeight: 1.7 }}>
+                {s.title}
               </div>
-              <div className="pixel-font mb-3 text-white" style={{ fontSize: 9 }}>{s.title}</div>
-              <p className="body-font text-sm" style={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 }}>{s.desc}</p>
+              <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 15, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, margin: 0 }}>
+                {s.desc}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* BONUS — pixel mini-game callout */}
-      <section className="py-12 px-6 max-w-6xl mx-auto">
-        <div
-          className="p-8 flex flex-col md:flex-row items-center gap-6"
-          style={{ border: '1px solid rgba(255,230,0,0.15)', background: 'rgba(255,230,0,0.03)' }}
-        >
-          <div className="pixel-font text-3xl flex-shrink-0" style={{ color: 'var(--y)' }}>▶</div>
-          <div>
-            <p className="pixel-font mb-2" style={{ fontSize: 9, color: 'var(--y)' }}>BONUS</p>
-            <p className="body-font" style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.7 }}>
-              Bring your IP into the pixel mini-game. Your character becomes a pixel pet inside the Oodle game world.
-            </p>
-          </div>
-          <Link
-            href="https://oodle.vercel.app"
-            target="_blank"
-            className="pixel-font text-xs px-5 py-3 flex-shrink-0 transition-all hover:opacity-90"
-            style={{ background: 'var(--y)', color: '#07070d', fontSize: 9 }}
-          >
-            PLAY NOW →
-          </Link>
+      <Divider />
+
+      {/* ── MONETIZE ────────────────────────────────────────── */}
+      <section id="monetize" style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px' }}>
+        <h2 style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 16, color: '#ffffff', margin: '0 0 48px', textAlign: 'center' }}>
+          MONETIZE YOUR IP
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 1, background: 'rgba(255,255,255,0.07)' }}>
+          {MONETIZE.map(m => (
+            <div key={m.title} style={{
+              background: '#07070d',
+              padding: '32px',
+              position: 'relative',
+            }}>
+              <span style={{
+                position: 'absolute', top: 14, right: 14,
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 7,
+                background: '#FFE600',
+                color: '#07070d',
+                padding: '3px 8px',
+                letterSpacing: 0.5,
+              }}>
+                COMING SOON
+              </span>
+              <div style={{ fontSize: 32, marginBottom: 16 }}>{m.icon}</div>
+              <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 11, color: '#ffffff', marginBottom: 10 }}>
+                {m.title}
+              </div>
+              <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.45)', margin: 0 }}>
+                {m.desc}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* ROADMAP */}
-      <section id="roadmap" className="py-20 px-6 max-w-6xl mx-auto">
-        <h2 className="pixel-font text-sm mb-12 text-center" style={{ color: 'var(--y)' }}>ROADMAP</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Divider />
+
+      {/* ── ROADMAP ─────────────────────────────────────────── */}
+      <section id="roadmap" style={{ maxWidth: 800, margin: '0 auto', padding: '80px 24px' }}>
+        <h2 style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 16, color: '#ffffff', margin: '0 0 48px' }}>
+          ROADMAP
+        </h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {ROADMAP.map(r => (
-            <div key={r.phase} className="p-6" style={{ border: '1px solid var(--border)', background: 'var(--card)' }}>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="body-font text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>{r.phase}</span>
-                <span
-                  className="body-font text-xs px-2 py-0.5"
-                  style={{
-                    background: r.status === 'LIVE' ? 'rgba(0,255,0,0.1)' : 'rgba(255,230,0,0.08)',
-                    color: r.status === 'LIVE' ? '#00ff88' : 'var(--y)',
-                    border: `1px solid ${r.status === 'LIVE' ? 'rgba(0,255,136,0.2)' : 'rgba(255,230,0,0.15)'}`,
-                    fontSize: 9,
-                  }}
-                >
-                  {r.status}
+            <div key={r.label} style={{
+              borderLeft: `4px solid ${r.color}`,
+              background: r.bg,
+              padding: '28px 28px 28px 32px',
+              marginBottom: 2,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <span style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: r.color,
+                  border: `1px solid ${r.color}`,
+                  padding: '3px 8px',
+                  letterSpacing: 1,
+                }}>
+                  {r.label}
                 </span>
               </div>
-              <div className="pixel-font mb-4 text-white" style={{ fontSize: 9 }}>{r.title}</div>
-              <ul className="space-y-2">
+              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
                 {r.items.map(item => (
-                  <li key={item} className="body-font text-xs flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                    <span style={{ color: 'var(--y)' }}>—</span> {item}
-                  </li>
+                  <span key={item} style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>
+                    · {item}
+                  </span>
                 ))}
-              </ul>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* BOTTOM CTA */}
-      <section className="py-24 px-6 text-center">
-        <h2 className="pixel-font mb-6" style={{ fontSize: 'clamp(14px, 2.5vw, 24px)', color: '#fff' }}>
-          READY TO BUILD<br />
-          <span style={{ color: 'var(--y)' }}>YOUR IP?</span>
-        </h2>
-        <p className="body-font mb-8 max-w-sm mx-auto" style={{ color: 'rgba(255,255,255,0.45)' }}>
-          Publish your original character on Oodle Creators and claim your creator page today.
-        </p>
-        <Link
-          href="https://oodle.vercel.app"
-          target="_blank"
-          className="pixel-font text-xs px-8 py-4 inline-block transition-all hover:opacity-90"
-          style={{ background: 'var(--y)', color: '#07070d' }}
-        >
-          ✦ START NOW — IT&apos;S FREE
-        </Link>
+      <Divider />
+
+      {/* ── OODLE GAME BONUS ────────────────────────────────── */}
+      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px' }}>
+        <div style={{
+          background: 'rgba(255,255,255,0.02)',
+          borderLeft: '4px solid #FFE600',
+          padding: '48px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 48,
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={{
+              display: 'inline-block',
+              fontFamily: 'var(--font-body), sans-serif',
+              fontSize: 12,
+              color: '#FFE600',
+              border: '1px solid rgba(255,230,0,0.3)',
+              padding: '4px 12px',
+              marginBottom: 20,
+              letterSpacing: 1,
+            }}>
+              🎮 BONUS FEATURE
+            </div>
+            <h2 style={{
+              fontFamily: 'var(--font-pixel), monospace',
+              fontSize: 'clamp(13px, 2vw, 18px)',
+              color: '#ffffff',
+              lineHeight: 1.6,
+              margin: '0 0 20px',
+            }}>
+              Bring Your IP Into a Pixel Mini-Game
+            </h2>
+            <p style={{
+              fontFamily: 'var(--font-body), sans-serif',
+              fontSize: 15,
+              color: 'rgba(255,255,255,0.6)',
+              lineHeight: 1.7,
+              margin: '0 0 28px',
+              maxWidth: 480,
+            }}>
+              Oodle is a browser-based pixel pet game. Upload your character here and it can come alive as a pixel pet in the game.
+            </p>
+            <Link href="https://oodle.vercel.app" target="_blank" style={{
+              fontFamily: 'var(--font-pixel), monospace',
+              fontSize: 10,
+              color: '#ffffff',
+              textDecoration: 'none',
+              padding: '12px 22px',
+              border: '1px solid rgba(255,255,255,0.3)',
+              letterSpacing: 1,
+              transition: 'border-color 150ms',
+            }}>
+              PLAY OODLE →
+            </Link>
+          </div>
+
+          {/* Pixel art placeholder */}
+          <div style={{
+            width: 80, height: 80,
+            flexShrink: 0,
+            backgroundImage: `
+              repeating-linear-gradient(45deg, rgba(255,230,0,0.1) 0, rgba(255,230,0,0.1) 10px, transparent 10px, transparent 20px),
+              repeating-linear-gradient(-45deg, rgba(255,230,0,0.1) 0, rgba(255,230,0,0.1) 10px, transparent 10px, transparent 20px)
+            `,
+            border: '1px solid rgba(255,230,0,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <span style={{ fontSize: 32 }}>🎮</span>
+          </div>
+        </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="py-10 px-6 text-center" style={{ borderTop: '1px solid var(--border)' }}>
-        <div className="pixel-font text-sm mb-4" style={{ color: 'var(--y)' }}>OODLE</div>
-        <div className="flex justify-center gap-6 mb-6 flex-wrap">
-          <Link href="/gallery" className="body-font text-xs hover:text-white" style={{ color: 'rgba(255,255,255,0.4)' }}>Gallery</Link>
-          <Link href="https://oodle.vercel.app" target="_blank" className="body-font text-xs hover:text-white" style={{ color: 'rgba(255,255,255,0.4)' }}>Play the Game</Link>
-          <Link href="#roadmap" className="body-font text-xs hover:text-white" style={{ color: 'rgba(255,255,255,0.4)' }}>Roadmap</Link>
-        </div>
-        <p className="body-font text-xs" style={{ color: 'rgba(255,255,255,0.2)' }}>
-          © 2026 Oodle. All character IPs belong to their creators.
-        </p>
-      </footer>
+      <Divider />
 
-      <style>{`
-        @keyframes scroll {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
-        }
-      `}</style>
+      {/* ── FOOTER ──────────────────────────────────────────── */}
+      <footer style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <span style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 12, color: '#FFE600' }}>
+          OODLE CREATORS
+        </span>
+        <div style={{ display: 'flex', gap: 28 }}>
+          {[
+            { label: 'Gallery', href: '/gallery' },
+            { label: 'Create', href: '/create' },
+            { label: 'Game', href: 'https://oodle.vercel.app' },
+          ].map(l => (
+            <Link key={l.label} href={l.href} style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>
+              {l.label}
+            </Link>
+          ))}
+        </div>
+        <span style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.25)' }}>
+          © 2026 Oodle Creators
+        </span>
+      </footer>
     </div>
   )
 }
+

@@ -1,0 +1,395 @@
+'use client'
+
+import { useState, useRef, useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { supabase } from '../../lib/supabase'
+import { signInWithGoogle } from '../../lib/auth'
+import { generateSlug } from '../../lib/utils'
+import StyleTagPill from '../../components/StyleTagPill'
+import CharacterCard from '../../components/CharacterCard'
+
+const STYLE_TAGS = ['Hand-drawn', 'Digital Art', 'AI Generated', '3D', 'Photography', 'Other']
+
+interface Errors {
+  image?: string
+  characterName?: string
+  creatorName?: string
+  submit?: string
+}
+
+export default function CreatePage() {
+  const router = useRouter()
+
+  // Form state
+  const [characterName, setCharacterName] = useState('')
+  const [creatorName,   setCreatorName]   = useState('')
+  const [bio,           setBio]           = useState('')
+  const [selectedTags,  setSelectedTags]  = useState<string[]>([])
+  const [isPublic,      setIsPublic]      = useState(true)
+  const [imageFile,     setImageFile]     = useState<File | null>(null)
+  const [imagePreview,  setImagePreview]  = useState<string | null>(null)
+  const [isDragOver,    setIsDragOver]    = useState(false)
+  const [loading,       setLoading]       = useState(false)
+  const [errors,        setErrors]        = useState<Errors>({})
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const applyFile = useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) return
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors(e => ({ ...e, image: 'File must be under 10MB' }))
+      return
+    }
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+    setErrors(e => ({ ...e, image: undefined }))
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) applyFile(file)
+  }, [applyFile])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) applyFile(file)
+  }
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    )
+  }
+
+  const validate = (): boolean => {
+    const e: Errors = {}
+    if (!imageFile)            e.image         = 'Please select an image'
+    if (!characterName.trim()) e.characterName = 'Character name is required'
+    if (!creatorName.trim())   e.creatorName   = 'Creator name is required'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  const handleSubmit = async () => {
+    if (!validate()) return
+    setLoading(true)
+
+    // Check auth
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      setLoading(false)
+      signInWithGoogle()
+      return
+    }
+
+    // Upload image
+    const ext = imageFile!.name.split('.').pop() ?? 'png'
+    const filePath = `${user.id}/${Date.now()}.${ext}`
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('character-images')
+      .upload(filePath, imageFile!, { upsert: false })
+
+    if (uploadError) {
+      setErrors({ submit: `Upload failed: ${uploadError.message}` })
+      setLoading(false)
+      return
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('character-images')
+      .getPublicUrl(uploadData.path)
+
+    // Insert character
+    const slug = generateSlug(characterName)
+    const { data: charData, error: insertError } = await supabase
+      .from('characters')
+      .insert({
+        user_id:        user.id,
+        character_name: characterName.trim(),
+        creator_name:   creatorName.trim(),
+        bio:            bio.trim() || null,
+        image_url:      publicUrl,
+        style_tags:     selectedTags,
+        is_public:      isPublic,
+        slug,
+      })
+      .select('slug')
+      .single()
+
+    if (insertError) {
+      setErrors({ submit: `Publish failed: ${insertError.message}` })
+      setLoading(false)
+      return
+    }
+
+    router.push(`/p/${(charData as { slug: string }).slug}`)
+  }
+
+  /* ── Shared input style ── */
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: '#ffffff',
+    fontFamily: 'var(--font-body), sans-serif',
+    fontSize: 15,
+    padding: '12px 14px',
+    outline: 'none',
+    borderRadius: 0,
+    transition: 'border-color 150ms',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontFamily: 'var(--font-pixel), monospace',
+    fontSize: 9,
+    color: '#ffffff',
+    letterSpacing: 1,
+    marginBottom: 8,
+  }
+
+  const errorStyle: React.CSSProperties = {
+    fontFamily: 'var(--font-body), sans-serif',
+    fontSize: 13,
+    color: '#ff6b6b',
+    marginTop: 6,
+  }
+
+  return (
+    <div style={{ background: '#07070d', minHeight: '100vh' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px' }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: 48 }}>
+          <Link href="/" style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', display: 'block', marginBottom: 16 }}>
+            ← BACK
+          </Link>
+          <h1 style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 'clamp(14px, 3vw, 22px)', color: '#ffffff', margin: '0 0 12px' }}>
+            SHARE YOUR IP
+          </h1>
+          <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 15, color: 'rgba(255,255,255,0.45)', margin: 0 }}>
+            Upload your character and share it with the community
+          </p>
+        </div>
+
+        {/* Two-column layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'start' }} className="grid-cols-1 lg:grid-cols-2">
+
+          {/* ── LEFT: Form ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+            {/* Upload zone */}
+            <div>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDrop={handleDrop}
+                onDragOver={e => { e.preventDefault(); setIsDragOver(true) }}
+                onDragLeave={() => setIsDragOver(false)}
+                style={{
+                  border: `2px dashed ${isDragOver ? '#FFE600' : 'rgba(255,255,255,0.2)'}`,
+                  background: isDragOver ? 'rgba(255,230,0,0.03)' : 'rgba(255,255,255,0.02)',
+                  cursor: 'pointer',
+                  minHeight: 220,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 12,
+                  padding: 24,
+                  transition: 'border-color 150ms, background 150ms',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                {imagePreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imagePreview} alt="preview" style={{ maxHeight: 200, maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
+                ) : (
+                  <>
+                    <span style={{ fontSize: 48, opacity: 0.5 }}>⬆</span>
+                    <span style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 11, color: '#ffffff', textAlign: 'center', lineHeight: 1.8 }}>
+                      Drop your character design here
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>
+                      or click to browse
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center' }}>
+                      Any style — hand-drawn, digital, AI-generated, 3D, photography
+                    </span>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {['JPG', 'PNG', 'GIF', 'WEBP', 'Max 10MB'].map(b => (
+                        <span key={b} style={{
+                          fontFamily: 'var(--font-body), sans-serif',
+                          fontSize: 11,
+                          color: 'rgba(255,255,255,0.3)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          padding: '2px 8px',
+                        }}>
+                          {b}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              {imagePreview && (
+                <button onClick={() => { setImageFile(null); setImagePreview(null) }} style={{
+                  fontFamily: 'var(--font-body), sans-serif',
+                  fontSize: 12,
+                  color: 'rgba(255,255,255,0.4)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  marginTop: 8,
+                  padding: 0,
+                }}>
+                  Remove image
+                </button>
+              )}
+              {errors.image && <p style={errorStyle}>{errors.image}</p>}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+            </div>
+
+            {/* Character name */}
+            <div>
+              <label style={labelStyle}>CHARACTER NAME *</label>
+              <input
+                type="text"
+                value={characterName}
+                onChange={e => setCharacterName(e.target.value)}
+                placeholder="e.g. Drakeling"
+                style={inputStyle}
+                onFocus={e => (e.target.style.borderColor = '#FFE600')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+              />
+              {errors.characterName && <p style={errorStyle}>{errors.characterName}</p>}
+            </div>
+
+            {/* Creator name */}
+            <div>
+              <label style={labelStyle}>CREATOR NAME *</label>
+              <input
+                type="text"
+                value={creatorName}
+                onChange={e => setCreatorName(e.target.value)}
+                placeholder="e.g. dragonart"
+                style={inputStyle}
+                onFocus={e => (e.target.style.borderColor = '#FFE600')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+              />
+              {errors.creatorName && <p style={errorStyle}>{errors.creatorName}</p>}
+            </div>
+
+            {/* Bio */}
+            <div>
+              <label style={labelStyle}>YOUR STORY / BIO</label>
+              <textarea
+                value={bio}
+                onChange={e => setBio(e.target.value)}
+                rows={4}
+                placeholder="Tell your character's story..."
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+                onFocus={e => (e.target.style.borderColor = '#FFE600')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+              />
+            </div>
+
+            {/* Style tags */}
+            <div>
+              <label style={labelStyle}>STYLE TAGS (select all that apply)</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {STYLE_TAGS.map(tag => (
+                  <StyleTagPill
+                    key={tag}
+                    label={tag}
+                    selected={selectedTags.includes(tag)}
+                    onClick={() => toggleTag(tag)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Public toggle */}
+            <div>
+              <label style={labelStyle}>PUBLIC</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <button
+                  type="button"
+                  onClick={() => setIsPublic(p => !p)}
+                  className={`toggle-track${isPublic ? ' on' : ''}`}
+                  aria-label="Toggle public"
+                >
+                  <div className="toggle-thumb" />
+                </button>
+                <span style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.5)' }}>
+                  {isPublic
+                    ? 'Anyone can discover your character in the gallery'
+                    : 'Only you can see this character'}
+                </span>
+              </div>
+            </div>
+
+            {/* Submit */}
+            {errors.submit && (
+              <p style={{ ...errorStyle, padding: '12px 16px', border: '1px solid rgba(255,107,107,0.3)', background: 'rgba(255,107,107,0.05)' }}>
+                {errors.submit}
+              </p>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              style={{
+                width: '100%',
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 13,
+                color: '#07070d',
+                background: loading ? 'rgba(255,230,0,0.5)' : '#FFE600',
+                border: 'none',
+                padding: '18px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                letterSpacing: 1,
+                transition: 'opacity 150ms',
+              }}
+            >
+              {loading ? 'PUBLISHING...' : 'PUBLISH TO GALLERY →'}
+            </button>
+
+            <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center', margin: 0 }}>
+              ✦ Oodle game users — your pixel pets automatically appear here
+            </p>
+          </div>
+
+          {/* ── RIGHT: Live preview ── */}
+          <div style={{ position: 'sticky', top: 88 }}>
+            <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 20, letterSpacing: 1 }}>
+              PREVIEW
+            </p>
+            <div style={{ maxWidth: 260 }}>
+              <CharacterCard
+                characterName={characterName || 'CHARACTER NAME'}
+                creatorHandle={creatorName || 'creator'}
+                imageUrl={imagePreview ?? undefined}
+                likes={0}
+                fans={0}
+                isVerified
+              />
+            </div>
+            <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.25)', marginTop: 16 }}>
+              This is how your character will appear in the gallery
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  )
+}

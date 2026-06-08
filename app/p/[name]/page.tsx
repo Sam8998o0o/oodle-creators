@@ -2,207 +2,299 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { supabase } from '../../../lib/supabase'
-import PixelArt from '../../../components/PixelArt'
 import CopyLinkButton from '../../../components/CopyLinkButton'
+import LikeFollowButtons from '../../../components/LikeFollowButtons'
+import CharacterCard from '../../../components/CharacterCard'
+import { formatDate } from '../../../lib/utils'
 
-interface Pet {
+interface Character {
   id: string
-  name: string
-  pixel_data: string
-  coords: unknown
-  creator_name?: string
-  talent?: string
-  talent_drawing?: string
+  character_name: string
+  creator_name: string
+  bio: string | null
+  image_url: string | null
+  style_tags: string[]
+  likes: number
+  fans: number
+  has_talent: boolean
+  talent_type: string | null
+  pixel_data: Record<string, unknown> | null
   created_at: string
+  slug: string
+  user_id: string
 }
 
-interface LikeRow {
-  pet_id: string
-}
-
-async function getPet(name: string): Promise<Pet | null> {
+async function getCharacter(slug: string): Promise<Character | null> {
   const { data } = await supabase
-    .from('pets')
-    .select('id, name, pixel_data, coords, creator_name, talent, talent_drawing, created_at')
-    .eq('name', decodeURIComponent(name))
-    .eq('is_dead', false)
+    .from('characters')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_public', true)
     .maybeSingle()
-  return (data as Pet | null) ?? null
+  return (data as Character | null) ?? null
 }
 
-async function getLikeCount(petId: string): Promise<number> {
-  const { data } = await supabase.from('likes').select('pet_id').eq('pet_id', petId)
-  return (data as LikeRow[] | null)?.length ?? 0
+async function getRelated(userId: string, charId: string): Promise<Character[]> {
+  const { data } = await supabase
+    .from('characters')
+    .select('id, character_name, creator_name, image_url, likes, fans, slug')
+    .eq('user_id', userId)
+    .eq('is_public', true)
+    .neq('id', charId)
+    .limit(3)
+  return (data ?? []) as Character[]
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }): Promise<Metadata> {
   const { name } = await params
-  const pet = await getPet(name)
-  if (!pet) return { title: 'Not Found' }
+  const char = await getCharacter(name)
+  if (!char) return { title: 'Not Found — Oodle Creators' }
   return {
-    title: `${pet.name} — Oodle Creators`,
-    description: pet.talent
-      ? `${pet.name} is an original character with talent: ${pet.talent}. Created by ${pet.creator_name ?? 'an Oodle creator'}.`
-      : `${pet.name} is an original character created by ${pet.creator_name ?? 'an Oodle creator'}.`,
+    title: `${char.character_name} — Oodle Creators`,
+    description: char.bio ?? `An original character created by ${char.creator_name}.`,
     openGraph: {
-      title: `${pet.name} — Oodle Creators`,
-      description: `Check out this character on Oodle Creators!`,
+      title: `${char.character_name} — Oodle Creators`,
+      description: char.bio ?? `Check out this character on Oodle Creators!`,
+      images: char.image_url ? [{ url: char.image_url }] : [],
     },
   }
 }
 
-export default async function IPPage({ params }: { params: Promise<{ name: string }> }) {
+export default async function CharacterPage({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params
-  const pet = await getPet(name)
-  if (!pet) notFound()
+  const char = await getCharacter(name)
+  if (!char) notFound()
 
-  const likeCount = await getLikeCount(pet.id)
-  const age = Math.floor((Date.now() - new Date(pet.created_at).getTime()) / 86400000)
-  const shareUrl = `https://oodle-creators.vercel.app/p/${encodeURIComponent(pet.name)}`
-  const tweetText = `Check out ${pet.name} on Oodle Creators!${pet.talent ? ` Talent: ${pet.talent}` : ''} ${shareUrl}`
+  const related = await getRelated(char.user_id, char.id)
+  const shareUrl = `https://oodle-creators.vercel.app/p/${char.slug}`
+  const tweetText = `Check out ${char.character_name} on Oodle Creators! ${shareUrl}`
 
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
-      {/* NAV */}
-      <nav
-        style={{ borderBottom: '1px solid var(--border)', backdropFilter: 'blur(12px)', background: 'rgba(7,7,13,0.9)' }}
-        className="sticky top-0 z-50"
-      >
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between h-14">
-          <Link href="/" className="pixel-font text-sm" style={{ color: 'var(--y)' }}>OODLE</Link>
-          <Link href="/gallery" className="body-font text-xs hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            ← GALLERY
-          </Link>
-        </div>
-      </nav>
+    <div style={{ background: '#07070d', minHeight: '100vh' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px' }}>
 
-      <div className="max-w-5xl mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-start">
+        <Link href="/gallery" style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', display: 'inline-block', marginBottom: 32 }}>
+          ← GALLERY
+        </Link>
 
-          {/* LEFT — character artwork */}
-          <div className="flex flex-col items-center gap-6">
-            <div
-              className="p-8 flex items-center justify-center"
-              style={{ border: '1px solid var(--border)', background: 'var(--card)' }}
-            >
-              <PixelArt
-                pixelData={pet.pixel_data}
-                coords={pet.coords as never}
-                size={240}
-              />
+        {/* Two-column layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'start' }} className="grid-cols-1 lg:grid-cols-2">
+
+          {/* LEFT — artwork */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Main image */}
+            <div style={{
+              aspectRatio: '1',
+              background: '#0e0e1a',
+              backgroundImage: `
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 24px),
+                repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 24px)
+              `,
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {char.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={char.image_url}
+                  alt={char.character_name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <span style={{ fontSize: 64, opacity: 0.3 }}>🎨</span>
+              )}
             </div>
-            {pet.talent_drawing && (
-              <div className="w-full">
-                <p className="pixel-font mb-3 text-center" style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>TALENT DRAWING</p>
-                <div className="p-4 flex items-center justify-center" style={{ border: '1px solid var(--border)', background: 'var(--card)' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={pet.talent_drawing}
-                    alt={`${pet.name} talent drawing`}
-                    style={{ imageRendering: 'pixelated', maxWidth: 200, maxHeight: 200 }}
-                  />
-                </div>
-              </div>
-            )}
+
+            {/* Share row */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {char.image_url && (
+                <a
+                  href={char.image_url}
+                  download={`${char.slug}.png`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontFamily: 'var(--font-pixel), monospace',
+                    fontSize: 8,
+                    color: '#ffffff',
+                    textDecoration: 'none',
+                    padding: '10px 16px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    letterSpacing: 1,
+                  }}
+                >
+                  ⬇ DOWNLOAD PNG
+                </a>
+              )}
+              <CopyLinkButton url={shareUrl} />
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: '#ffffff',
+                  textDecoration: 'none',
+                  padding: '10px 16px',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  letterSpacing: 1,
+                }}
+              >
+                𝕏 SHARE
+              </a>
+            </div>
           </div>
 
           {/* RIGHT — info */}
-          <div className="flex flex-col gap-6">
-            {/* Name + likes */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+            {/* Badge + name */}
             <div>
-              <h1 className="pixel-font leading-relaxed mb-2" style={{ fontSize: 'clamp(16px, 3vw, 28px)', color: '#fff' }}>
-                {pet.name}
+              <span style={{
+                display: 'inline-block',
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 7,
+                background: '#FFE600',
+                color: '#07070d',
+                padding: '4px 10px',
+                marginBottom: 16,
+                letterSpacing: 1,
+              }}>
+                ✦ CREATOR
+              </span>
+              <h1 style={{
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 'clamp(18px, 3vw, 28px)',
+                color: '#ffffff',
+                margin: '0 0 10px',
+                lineHeight: 1.5,
+              }}>
+                {char.character_name}
               </h1>
-              {pet.creator_name && (
-                <p className="body-font text-sm mb-4" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                  by {pet.creator_name}
-                </p>
-              )}
-              <div className="flex items-center gap-4 flex-wrap">
-                <span
-                  className="body-font px-4 py-2 text-sm"
-                  style={{ border: '1px solid var(--border)', background: 'var(--card)', color: '#fff' }}
-                >
-                  ♡ {likeCount} {likeCount === 1 ? 'like' : 'likes'}
-                </span>
-                <span className="body-font text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                  {age === 0 ? 'Created today' : `${age} day${age !== 1 ? 's' : ''} old`}
-                </span>
-              </div>
+              <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 16, color: '#FFE600', margin: '0 0 20px' }}>
+                by @{char.creator_name}
+              </p>
+
+              {/* Stats */}
+              <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+                ❤ {char.likes} · 👥 {char.fans} fans · 📅 {formatDate(char.created_at)}
+              </p>
             </div>
 
-            {/* Talent badge */}
-            {pet.talent && (
-              <div>
-                <p className="pixel-font mb-2" style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>TALENT</p>
-                <span
-                  className="inline-block body-font px-4 py-2 text-sm capitalize"
-                  style={{ background: 'rgba(255,230,0,0.08)', color: 'var(--y)', border: '1px solid rgba(255,230,0,0.2)' }}
-                >
-                  {pet.talent}
-                </span>
+            {/* Bio */}
+            {char.bio && (
+              <p style={{
+                fontFamily: 'var(--font-body), sans-serif',
+                fontSize: 15,
+                color: 'rgba(255,255,255,0.7)',
+                lineHeight: 1.8,
+                margin: 0,
+              }}>
+                {char.bio}
+              </p>
+            )}
+
+            {/* Like / Follow */}
+            <LikeFollowButtons
+              characterId={char.id}
+              initialLikes={char.likes}
+              initialFans={char.fans}
+            />
+
+            {/* Style tags */}
+            {char.style_tags?.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {char.style_tags.map(tag => (
+                  <span key={tag} style={{
+                    fontFamily: 'var(--font-body), sans-serif',
+                    fontSize: 13,
+                    color: 'rgba(255,255,255,0.55)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    padding: '5px 14px',
+                  }}>
+                    {tag}
+                  </span>
+                ))}
               </div>
             )}
 
-            {/* Stats */}
-            <div
-              className="p-5 grid grid-cols-2 gap-4"
-              style={{ border: '1px solid var(--border)', background: 'var(--card)' }}
-            >
-              <div>
-                <p className="pixel-font mb-1" style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>AGE</p>
-                <p className="body-font text-sm text-white">{age} day{age !== 1 ? 's' : ''}</p>
+            {/* Talent section */}
+            {char.has_talent && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 24 }}>
+                <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 10, color: '#FFE600', margin: '0 0 16px', letterSpacing: 1 }}>
+                  ✦ TALENTS
+                </p>
+                {char.talent_type && (
+                  <span style={{
+                    display: 'inline-block',
+                    fontFamily: 'var(--font-pixel), monospace',
+                    fontSize: 9,
+                    color: '#07070d',
+                    background: '#FFE600',
+                    padding: '6px 14px',
+                    letterSpacing: 1,
+                  }}>
+                    {char.talent_type === 'draw' ? '🎨 TRICK ART' : '💃 DANCE'}
+                  </span>
+                )}
               </div>
-              <div>
-                <p className="pixel-font mb-1" style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>LIKES</p>
-                <p className="body-font text-sm text-white">{likeCount}</p>
+            )}
+
+            {/* Oodle game section */}
+            {char.pixel_data && (
+              <div style={{
+                background: 'rgba(255,230,0,0.04)',
+                border: '1px solid rgba(255,230,0,0.15)',
+                padding: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 20,
+              }}>
+                <span style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.6)', flex: 1 }}>
+                  🎮 This character is also alive in the Oodle pixel game
+                </span>
+                <Link href="https://oodle.vercel.app" target="_blank" style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: '#07070d',
+                  background: '#FFE600',
+                  textDecoration: 'none',
+                  padding: '10px 16px',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: 1,
+                }}>
+                  MEET IN GAME →
+                </Link>
               </div>
-              <div>
-                <p className="pixel-font mb-1" style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>STATUS</p>
-                <p className="body-font text-sm" style={{ color: '#00ff88' }}>ALIVE</p>
-              </div>
-              {pet.talent && (
-                <div>
-                  <p className="pixel-font mb-1" style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>TALENT</p>
-                  <p className="body-font text-sm capitalize" style={{ color: 'var(--y)' }}>{pet.talent}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Related characters */}
+        {related.length > 0 && (
+          <div style={{ marginTop: 80, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 48 }}>
+            <h2 style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 13, color: '#ffffff', margin: '0 0 32px' }}>
+              MORE FROM THIS CREATOR
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 1, background: 'rgba(255,255,255,0.07)', maxWidth: 720 }}>
+              {related.map(r => (
+                <div key={r.id} style={{ background: '#07070d' }}>
+                  <CharacterCard
+                    characterName={r.character_name}
+                    creatorHandle={r.creator_name}
+                    imageUrl={r.image_url ?? undefined}
+                    likes={r.likes}
+                    fans={r.fans}
+                    slug={r.slug}
+                  />
                 </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-col gap-3">
-              <Link
-                href="https://oodle.vercel.app"
-                target="_blank"
-                className="pixel-font text-xs px-6 py-4 text-center transition-all hover:opacity-90"
-                style={{ background: 'var(--y)', color: '#07070d' }}
-              >
-                ▶ MEET IN GAME
-              </Link>
-
-              <div className="flex gap-3">
-                <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 pixel-font text-xs px-4 py-3 text-center border transition-all hover:bg-white/5"
-                  style={{ borderColor: 'var(--border)', color: 'rgba(255,255,255,0.5)', fontSize: 9 }}
-                >
-                  SHARE ON X
-                </a>
-                <CopyLinkButton url={shareUrl} />
-              </div>
+              ))}
             </div>
           </div>
-        </div>
-
-        {/* More from gallery */}
-        <div className="mt-20 pt-12" style={{ borderTop: '1px solid var(--border)' }}>
-          <div className="flex items-center justify-between mb-6">
-            <span className="pixel-font" style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)' }}>MORE CHARACTERS</span>
-            <Link href="/gallery" className="body-font text-xs hover:opacity-80" style={{ color: 'var(--y)' }}>VIEW ALL →</Link>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )
