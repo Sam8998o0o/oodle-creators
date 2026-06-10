@@ -2,8 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { supabase } from '../../../lib/supabase'
-import CharacterCard from '../../../components/CharacterCard'
 import UniverseActionButtons from '../../../components/UniverseActionButtons'
+import UniverseCharactersGrid, { type UniverseCharacter } from '../../../components/UniverseCharactersGrid'
 import { formatNumber } from '../../../lib/utils'
 
 /* ── Types ── */
@@ -28,16 +28,6 @@ interface Member {
   role: string
   display_name: string | null
   avatar_url: string | null
-}
-
-interface UniverseCharacter {
-  id: string
-  character_name: string
-  creator_name: string
-  image_url: string | null
-  likes: number
-  fans: number
-  slug: string
 }
 
 interface UniverseUpdate {
@@ -248,27 +238,8 @@ export default async function UniversePage({ params }: { params: Promise<{ slug:
             <span style={{ color: 'rgba(255,255,255,0.55)' }}>@{universe.owner_name}</span>
           </p>
 
-          {/* Action buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <UniverseActionButtons universeId={universe.id} />
-            <Link
-              href={`/u/${universe.slug}/invite`}
-              style={{
-                fontFamily: 'var(--font-pixel), monospace',
-                fontSize: 8,
-                color: 'rgba(255,255,255,0.45)',
-                textDecoration: 'none',
-                padding: '12px 16px',
-                border: '1px solid rgba(255,255,255,0.12)',
-                letterSpacing: 1,
-                transition: 'border-color 150ms, color 150ms',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; e.currentTarget.style.color = '#ffffff' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
-            >
-              ⚙ MANAGE
-            </Link>
-          </div>
+          {/* Action buttons — client component handles follow / join */}
+          <UniverseActionButtons universeId={universe.id} />
         </div>
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 48 }}>
@@ -331,44 +302,11 @@ export default async function UniversePage({ params }: { params: Promise<{ slug:
             </div>
           )}
 
-          {/* ── Characters ── */}
-          <div style={{ marginBottom: 56 }}>
-            <p style={{
-              fontFamily: 'var(--font-pixel), monospace',
-              fontSize: 10,
-              color: 'rgba(255,255,255,0.35)',
-              margin: '0 0 20px',
-              letterSpacing: 1,
-            }}>
-              ✦ CHARACTERS
-            </p>
-
-            {characters.length === 0 ? (
-              <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.2)', margin: 0 }}>
-                No characters in this universe yet — join and add yours!
-              </p>
-            ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                gap: 1,
-                background: 'rgba(255,255,255,0.07)',
-              }}>
-                {characters.map(c => (
-                  <div key={c.id} style={{ background: '#07070d' }}>
-                    <CharacterCard
-                      characterName={c.character_name}
-                      creatorHandle={c.creator_name}
-                      imageUrl={c.image_url ?? undefined}
-                      likes={c.likes}
-                      fans={c.fans}
-                      slug={c.slug}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* ── Characters + Manage link — client component ── */}
+          <UniverseCharactersGrid
+            characters={characters}
+            universeSlug={universe.slug}
+          />
 
           {/* ── Updates ── */}
           {updates.length > 0 && (
