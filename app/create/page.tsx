@@ -431,7 +431,7 @@ export default function CreatePage() {
                   type="text"
                   value={catchphrase}
                   onChange={e => setCatchphrase(e.target.value.slice(0, 50))}
-                  placeholder="你的角色的口頭禪..."
+                  placeholder="Your character's catchphrase..."
                   style={inputStyle}
                   maxLength={50}
                   onFocus={e => (e.target.style.borderColor = '#FFE600')}
@@ -447,14 +447,14 @@ export default function CreatePage() {
                 <div>
                   <label style={labelStyle}>WORLD ORIGIN</label>
                   <input type="text" value={worldOrigin} onChange={e => setWorldOrigin(e.target.value)}
-                    placeholder="來自什麼世界 / 宇宙..." style={inputStyle}
+                    placeholder="What world or universe does your character come from..." style={inputStyle}
                     onFocus={e => (e.target.style.borderColor = '#FFE600')}
                     onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
                 </div>
                 <div>
                   <label style={labelStyle}>RACE</label>
                   <input type="text" value={race} onChange={e => setRace(e.target.value)}
-                    placeholder="種族，例如：人類、精靈、機器人..." style={inputStyle}
+                    placeholder="Race, e.g. Human, Elf, Robot..." style={inputStyle}
                     onFocus={e => (e.target.style.borderColor = '#FFE600')}
                     onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
                 </div>
@@ -465,14 +465,14 @@ export default function CreatePage() {
                 <div>
                   <label style={labelStyle}>OCCUPATION</label>
                   <input type="text" value={occupation} onChange={e => setOccupation(e.target.value)}
-                    placeholder="職業，例如：魔法師、偵探、學生..." style={inputStyle}
+                    placeholder="Occupation, e.g. Wizard, Detective, Student..." style={inputStyle}
                     onFocus={e => (e.target.style.borderColor = '#FFE600')}
                     onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
                 </div>
                 <div>
                   <label style={labelStyle}>WEAKNESSES</label>
                   <input type="text" value={weaknesses} onChange={e => setWeaknesses(e.target.value)}
-                    placeholder="弱點..." style={inputStyle}
+                    placeholder="Weaknesses..." style={inputStyle}
                     onFocus={e => (e.target.style.borderColor = '#FFE600')}
                     onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
                 </div>
@@ -482,7 +482,7 @@ export default function CreatePage() {
               <div>
                 <label style={labelStyle}>ABILITIES</label>
                 <input type="text" value={abilities} onChange={e => setAbilities(e.target.value)}
-                  placeholder="技能，用逗號分隔，例如：飛行, 讀心術, 變身" style={inputStyle}
+                  placeholder="Abilities, separate with commas, e.g. Flying, Telepathy, Shapeshifting" style={inputStyle}
                   onFocus={e => (e.target.style.borderColor = '#FFE600')}
                   onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
                 <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.3)', margin: '4px 0 0' }}>
