@@ -1,11 +1,9 @@
 'use client'
 
-import { signInWithGoogle } from '../lib/auth'
-
 export default function SignInLink() {
   return (
     <button
-      onClick={() => signInWithGoogle()}
+      onClick={() => window.dispatchEvent(new Event('open-sign-in-modal'))}
       style={{
         background: 'none',
         border: 'none',

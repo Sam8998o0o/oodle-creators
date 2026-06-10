@@ -49,13 +49,31 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   const { name } = await params
   const char = await getCharacter(name)
   if (!char) return { title: 'Not Found — Oodle Creators' }
+
+  const title = `${char.character_name} by @${char.creator_name} — Oodle Creators`
+  const rawDesc = char.bio?.trim()
+  const description = rawDesc
+    ? rawDesc.length > 160 ? rawDesc.slice(0, 157) + '...' : rawDesc
+    : `Discover ${char.character_name}, an original character IP by @${char.creator_name} on Oodle Creators.`
+  const url = `https://oodle-creators.vercel.app/p/${char.slug}`
+
   return {
-    title: `${char.character_name} — Oodle Creators`,
-    description: char.bio ?? `An original character created by ${char.creator_name}.`,
+    title,
+    description,
     openGraph: {
-      title: `${char.character_name} — Oodle Creators`,
-      description: char.bio ?? `Check out this character on Oodle Creators!`,
-      images: char.image_url ? [{ url: char.image_url }] : [],
+      title,
+      description,
+      type: 'profile',
+      url,
+      images: char.image_url
+        ? [{ url: char.image_url, width: 1200, height: 630, alt: char.character_name }]
+        : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: char.image_url ? [char.image_url] : undefined,
     },
   }
 }
@@ -78,7 +96,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
         </Link>
 
         {/* Two-column layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'start' }} className="grid-cols-1 lg:grid-cols-2">
+        <div style={{ display: 'grid', gap: 60, alignItems: 'start' }} className="grid-cols-1 lg:grid-cols-2">
 
           {/* LEFT — artwork */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -175,7 +193,13 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
                 {char.character_name}
               </h1>
               <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 16, color: '#FFE600', margin: '0 0 20px' }}>
-                by @{char.creator_name}
+                by{' '}
+                <Link
+                  href={`/creator/${char.creator_name}`}
+                  style={{ color: '#FFE600', textDecoration: 'underline', textDecorationColor: 'rgba(255,230,0,0.35)' }}
+                >
+                  @{char.creator_name}
+                </Link>
               </p>
 
               {/* Stats */}
@@ -279,7 +303,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
             <h2 style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 13, color: '#ffffff', margin: '0 0 32px' }}>
               MORE FROM THIS CREATOR
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 1, background: 'rgba(255,255,255,0.07)', maxWidth: 720 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 1, background: 'rgba(255,255,255,0.07)', maxWidth: 720 }}>
               {related.map(r => (
                 <div key={r.id} style={{ background: '#07070d' }}>
                   <CharacterCard

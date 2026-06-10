@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import CharacterCard from '../components/CharacterCard'
 import SignInLink from '../components/SignInLink'
+import HowItWorks from '../components/HowItWorks'
 
 /* ── Mock data ────────────────────────────────────────── */
 
@@ -31,11 +32,6 @@ const FEATURES = [
   { num: '04', icon: '💰', title: 'MONETIZE YOUR IP',    desc: 'Fan tips, merchandise drops, brand deals. Your IP, your income. (Coming Soon)' },
 ]
 
-const HOW_IT_WORKS = [
-  { num: '01', icon: '📤', title: 'UPLOAD YOUR CHARACTER',  desc: 'Upload any image — illustration, photo, AI art, sketch. Add your character name, story, and style tags.' },
-  { num: '02', icon: '🌏', title: 'GET DISCOVERED',         desc: 'Your character appears in the public gallery instantly. Fans can like, follow, and share your IP.' },
-  { num: '03', icon: '🚀', title: 'BUILD & MONETIZE',       desc: 'Grow your fanbase. Unlock creator tools, tips, merchandise, and brand deal opportunities.' },
-]
 
 const MONETIZE = [
   { icon: '💰', title: 'FAN TIPS',        desc: 'Fans send you tips directly' },
@@ -70,7 +66,7 @@ export default function LandingPage() {
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
-        padding: '80px 24px 60px',
+        padding: '0 24px',
         position: 'relative',
         overflow: 'hidden',
       }}>
@@ -90,7 +86,7 @@ export default function LandingPage() {
         {/* H1 */}
         <h1 className="fade-up delay-1" style={{
           fontFamily: 'var(--font-pixel), monospace',
-          fontSize: 'clamp(20px, 4vw, 36px)',
+          fontSize: 'clamp(18px, 5vw, 80px)',
           lineHeight: 1.5,
           margin: '0 0 28px',
           maxWidth: 800,
@@ -122,7 +118,7 @@ export default function LandingPage() {
           maskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
           WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
         }}>
-          <div className="scroll-track">
+          <div className="scroll-track" style={{ display: 'flex', width: 'max-content', flexWrap: 'nowrap', animation: 'scroll-left 30s linear infinite' }}>
             {[...HERO_CHIPS, ...HERO_CHIPS].map((chip, i) => (
               <span key={i} style={{
                 display: 'inline-flex',
@@ -143,7 +139,7 @@ export default function LandingPage() {
         </div>
 
         {/* CTAs */}
-        <div className="fade-up delay-4" style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 24 }}>
+        <div className="fade-up delay-4 flex-col sm:flex-row" style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
           <Link href="/create" style={{
             fontFamily: 'var(--font-pixel), monospace',
             fontSize: 11,
@@ -178,7 +174,7 @@ export default function LandingPage() {
 
       {/* ── FEATURES ────────────────────────────────────────── */}
       <section style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 0 0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }} className="md:grid-cols-2 grid-cols-1">
+        <div style={{ display: 'grid' }} className="grid-cols-1 md:grid-cols-2">
           {FEATURES.map((f, i) => (
             <div key={f.num} style={{
               padding: '40px',
@@ -199,6 +195,10 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      <Divider />
+
+      <HowItWorks />
 
       <Divider />
 
@@ -237,36 +237,6 @@ export default function LandingPage() {
               isCTA
             />
           </div>
-        </div>
-      </section>
-
-      <Divider />
-
-      {/* ── HOW IT WORKS ────────────────────────────────────── */}
-      <section id="how-it-works" style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px' }}>
-        <h2 style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 16, color: '#ffffff', margin: '0 0 48px', textAlign: 'center' }}>
-          HOW IT WORKS
-        </h2>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          border: '1px solid rgba(255,255,255,0.07)',
-        }} className="grid-cols-1 md:grid-cols-3">
-          {HOW_IT_WORKS.map((s, i) => (
-            <div key={s.num} style={{
-              padding: '40px',
-              borderRight: i < 2 ? '1px solid rgba(255,255,255,0.07)' : 'none',
-            }}>
-              <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 11, color: '#FFE600', marginBottom: 16 }}>{s.num}</div>
-              <div style={{ fontSize: 32, marginBottom: 16 }}>{s.icon}</div>
-              <div style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 11, color: '#ffffff', marginBottom: 14, lineHeight: 1.7 }}>
-                {s.title}
-              </div>
-              <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 15, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7, margin: 0 }}>
-                {s.desc}
-              </p>
-            </div>
-          ))}
         </div>
       </section>
 

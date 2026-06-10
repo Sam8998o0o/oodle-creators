@@ -33,7 +33,13 @@ export default function CreatePage() {
   const [loading,       setLoading]       = useState(false)
   const [errors,        setErrors]        = useState<Errors>({})
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // Success modal
+  const [successSlug, setSuccessSlug] = useState<string | null>(null)
+  const [successName, setSuccessName] = useState('')
+  const [copied,      setCopied]      = useState(false)
+
+  const fileInputRef   = useRef<HTMLInputElement>(null)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const applyFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return
@@ -62,6 +68,18 @@ export default function CreatePage() {
     setSelectedTags(prev =>
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     )
+  }
+
+  const handleCopy = async () => {
+    if (!successSlug) return
+    try {
+      await navigator.clipboard.writeText(`https://oodle-creators.vercel.app/p/${successSlug}`)
+      setCopied(true)
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard API unavailable
+    }
   }
 
   const validate = (): boolean => {
@@ -125,7 +143,10 @@ export default function CreatePage() {
       return
     }
 
-    router.push(`/p/${(charData as { slug: string }).slug}`)
+    const finalSlug = (charData as { slug: string }).slug
+    setLoading(false)
+    setSuccessSlug(finalSlug)
+    setSuccessName(characterName.trim())
   }
 
   /* ── Shared input style ── */
@@ -176,7 +197,7 @@ export default function CreatePage() {
         </div>
 
         {/* Two-column layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'start' }} className="grid-cols-1 lg:grid-cols-2">
+        <div style={{ display: 'grid', gap: 48, alignItems: 'start' }} className="grid-cols-1 lg:grid-cols-2">
 
           {/* ── LEFT: Form ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -390,6 +411,229 @@ export default function CreatePage() {
 
         </div>
       </div>
+
+      {/* ── Success modal ───────────────────────────────── */}
+      {successSlug && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            zIndex: 200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              background: '#07070d',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderTop: '3px solid #FFE600',
+              padding: '40px 36px 36px',
+              width: '100%',
+              maxWidth: 480,
+              position: 'relative',
+            }}
+          >
+            {/* ✕ close → go to character page */}
+            <button
+              onClick={() => router.push(`/p/${successSlug}`)}
+              aria-label="Close"
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                background: 'none',
+                border: 'none',
+                color: 'rgba(255,255,255,0.4)',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-body), sans-serif',
+                fontSize: 20,
+                lineHeight: 1,
+                padding: '4px 8px',
+                transition: 'color 150ms',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+            >
+              ✕
+            </button>
+
+            {/* Title */}
+            <h2
+              style={{
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 'clamp(11px, 2.5vw, 17px)',
+                color: '#FFE600',
+                margin: '0 0 16px',
+                letterSpacing: 1,
+                lineHeight: 1.7,
+              }}
+            >
+              ✦ YOUR CHARACTER IS LIVE!
+            </h2>
+
+            {/* Character name */}
+            <p
+              style={{
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 'clamp(10px, 2vw, 13px)',
+                color: '#FFE600',
+                margin: '0 0 32px',
+                letterSpacing: 1,
+                lineHeight: 1.7,
+              }}
+            >
+              {successName}
+            </p>
+
+            {/* Shareable link box */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                border: '1px solid rgba(255,255,255,0.12)',
+                background: 'rgba(255,255,255,0.02)',
+                marginBottom: 24,
+                overflow: 'hidden',
+              }}
+            >
+              <span
+                style={{
+                  flex: 1,
+                  fontFamily: 'var(--font-body), sans-serif',
+                  fontSize: 12,
+                  color: 'rgba(255,255,255,0.55)',
+                  padding: '12px 14px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0,
+                }}
+              >
+                {`https://oodle-creators.vercel.app/p/${successSlug}`}
+              </span>
+              <button
+                onClick={handleCopy}
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: '#07070d',
+                  background: copied ? '#a3d977' : '#FFE600',
+                  border: 'none',
+                  borderLeft: '1px solid rgba(255,255,255,0.12)',
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: 1,
+                  flexShrink: 0,
+                  transition: 'background 200ms',
+                }}
+              >
+                {copied ? 'COPIED ✓' : 'COPY LINK'}
+              </button>
+            </div>
+
+            {/* Three action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
+              {/* 𝕏 Share on X */}
+              <a
+                href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just shared my character ${successName} on Oodle Creators! Check it out 👇 https://oodle-creators.vercel.app/p/${successSlug}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  flex: '1 1 120px',
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: '#ffffff',
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  padding: '13px 8px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  letterSpacing: 1,
+                  transition: 'border-color 150ms',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#FFE600')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)')}
+              >
+                𝕏 SHARE ON X
+              </a>
+
+              {/* 🔗 Copy link */}
+              <button
+                onClick={handleCopy}
+                style={{
+                  flex: '1 1 120px',
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: '#ffffff',
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  padding: '13px 8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  letterSpacing: 1,
+                  transition: 'border-color 150ms',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#FFE600')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)')}
+              >
+                🔗 COPY LINK
+              </button>
+
+              {/* → View character */}
+              <button
+                onClick={() => router.push(`/p/${successSlug}`)}
+                style={{
+                  flex: '1 1 120px',
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: '#07070d',
+                  background: '#FFE600',
+                  border: '1px solid #FFE600',
+                  padding: '13px 8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  letterSpacing: 1,
+                  transition: 'opacity 150ms',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
+                → VIEW MY CHARACTER
+              </button>
+            </div>
+
+            {/* Gallery link */}
+            <div style={{ textAlign: 'center' }}>
+              <Link
+                href="/gallery"
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 9,
+                  color: 'rgba(255,255,255,0.35)',
+                  textDecoration: 'none',
+                  letterSpacing: 1,
+                  transition: 'color 150ms',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+              >
+                GO TO GALLERY →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -17,8 +17,16 @@ const notoSans = Noto_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Oodle Creators — Share Your Character IP',
-  description: 'The IP creator community platform. Upload your original character, get discovered, and build your audience.',
+  title: 'Oodle Creators — Share Your Character IP With The World',
+  description: 'Upload your original character. Get discovered by fans. Build your audience. Monetize your IP.',
+  openGraph: {
+    title: 'Oodle Creators — Share Your Character IP With The World',
+    description: 'Upload your original character. Get discovered by fans. Build your audience. Monetize your IP.',
+    images: [{ url: '/og-default.png' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
