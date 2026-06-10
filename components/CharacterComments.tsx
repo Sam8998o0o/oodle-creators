@@ -74,11 +74,12 @@ export default function CharacterComments({ characterId, initialComments }: Prop
 
     const { data, error: dbError } = await supabase
       .from('character_comments')
-      .insert({ character_id: characterId, content: trimmed })
+      .insert({ character_id: characterId, user_id: currentUser.id, content: trimmed })
       .select('id')
       .single()
 
     if (dbError) {
+      console.error('[CharacterComments] insert error:', dbError)
       setComments(prev => prev.filter(c => c.id !== tempId))
       setContent(trimmed)
       setError('Could not post comment — try again')
