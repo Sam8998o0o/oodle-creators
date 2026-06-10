@@ -9,6 +9,9 @@ import CharacterCard from '../../../components/CharacterCard'
 
 const STYLE_TAGS = ['Hand-drawn', 'Digital Art', 'AI Generated', '3D', 'Photography', 'Other']
 
+const PERSONALITY_OPTIONS = ['開朗', '神秘', '傲嬌', '溫柔', '瘋狂', '冷酷', '搞笑', '勇敢', '膽小', '邪惡']
+const EMOTION_OPTIONS     = ['😄 愛笑', '😤 易怒', '🥺 敏感', '😎 酷酷的', '😈 壞壞的', '🤩 自戀', '😴 懶惰', '🔥 熱血']
+
 interface Errors {
   characterName?: string
   creatorName?: string
@@ -35,6 +38,16 @@ export default function EditPage() {
   const [selectedTags,  setSelectedTags]  = useState<string[]>([])
   const [isPublic,      setIsPublic]      = useState(true)
 
+  /* ── Character profile fields ── */
+  const [selectedPersonality, setSelectedPersonality] = useState<string[]>([])
+  const [selectedEmotions,    setSelectedEmotions]    = useState<string[]>([])
+  const [catchphrase,         setCatchphrase]         = useState('')
+  const [worldOrigin,         setWorldOrigin]         = useState('')
+  const [race,                setRace]                = useState('')
+  const [occupation,          setOccupation]          = useState('')
+  const [abilities,           setAbilities]           = useState('')
+  const [weaknesses,          setWeaknesses]          = useState('')
+
   /* ── Image state ── */
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null)
   const [imageFile,        setImageFile]        = useState<File | null>(null)
@@ -57,7 +70,7 @@ export default function EditPage() {
 
       const { data: char } = await supabase
         .from('characters')
-        .select('id, character_name, creator_name, bio, image_url, style_tags, is_public, likes, fans, user_id')
+        .select('id, character_name, creator_name, bio, image_url, style_tags, is_public, likes, fans, user_id, personality, emotions, catchphrase, world_origin, race, occupation, abilities, weaknesses')
         .eq('slug', slug)
         .maybeSingle()
 
@@ -73,6 +86,14 @@ export default function EditPage() {
       setImagePreview(char.image_url)
       setExistingLikes(char.likes)
       setExistingFans(char.fans)
+      setSelectedPersonality((char.personality as string[] | null) ?? [])
+      setSelectedEmotions((char.emotions as string[] | null) ?? [])
+      setCatchphrase(char.catchphrase ?? '')
+      setWorldOrigin(char.world_origin ?? '')
+      setRace(char.race ?? '')
+      setOccupation(char.occupation ?? '')
+      setAbilities(char.abilities ?? '')
+      setWeaknesses(char.weaknesses ?? '')
       setFetchingData(false)
     }
     init()
@@ -100,6 +121,16 @@ export default function EditPage() {
     const file = e.target.files?.[0]
     if (file) applyFile(file)
   }
+
+  const togglePersonality = (p: string) =>
+    setSelectedPersonality(prev =>
+      prev.includes(p) ? prev.filter(i => i !== p) : prev.length < 3 ? [...prev, p] : prev
+    )
+
+  const toggleEmotion = (em: string) =>
+    setSelectedEmotions(prev =>
+      prev.includes(em) ? prev.filter(i => i !== em) : prev.length < 3 ? [...prev, em] : prev
+    )
 
   const revertImage = () => {
     setImageFile(null)
@@ -153,6 +184,14 @@ export default function EditPage() {
         image_url:      imageUrl,
         style_tags:     selectedTags,
         is_public:      isPublic,
+        personality:    selectedPersonality,
+        emotions:       selectedEmotions,
+        catchphrase:    catchphrase.trim() || null,
+        world_origin:   worldOrigin.trim() || null,
+        race:           race.trim() || null,
+        occupation:     occupation.trim() || null,
+        abilities:      abilities.trim() || null,
+        weaknesses:     weaknesses.trim() || null,
       })
       .eq('id', charId)
       .eq('user_id', user.id) // belt-and-suspenders: only own rows
@@ -411,6 +450,127 @@ export default function EditPage() {
                     }
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* ── CHARACTER PROFILE ─────────────────────────────── */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 24 }}>
+              <p style={{
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 10,
+                color: '#FFE600',
+                margin: '0 0 24px',
+                letterSpacing: 1,
+              }}>✦ CHARACTER PROFILE</p>
+
+              {/* PERSONALITY */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>PERSONALITY (pick up to 3)</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {PERSONALITY_OPTIONS.map(p => {
+                    const sel = selectedPersonality.includes(p)
+                    const dim = selectedPersonality.length >= 3 && !sel
+                    return (
+                      <button key={p} type="button" onClick={() => togglePersonality(p)} disabled={dim} style={{
+                        fontFamily: 'var(--font-pixel), monospace', fontSize: 9,
+                        padding: '7px 14px',
+                        border: `1px solid ${sel ? '#FFE600' : 'rgba(255,255,255,0.15)'}`,
+                        background: sel ? '#FFE600' : 'transparent',
+                        color: sel ? '#07070d' : 'rgba(255,255,255,0.6)',
+                        cursor: dim ? 'default' : 'pointer', opacity: dim ? 0.35 : 1,
+                        transition: 'all 150ms', borderRadius: 0, letterSpacing: 0.5,
+                      }}>{p}</button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* EMOTIONS */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>EMOTIONS (pick up to 3)</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {EMOTION_OPTIONS.map(em => {
+                    const sel = selectedEmotions.includes(em)
+                    const dim = selectedEmotions.length >= 3 && !sel
+                    return (
+                      <button key={em} type="button" onClick={() => toggleEmotion(em)} disabled={dim} style={{
+                        fontFamily: 'var(--font-pixel), monospace', fontSize: 9,
+                        padding: '7px 14px',
+                        border: `1px solid ${sel ? '#FFE600' : 'rgba(255,255,255,0.15)'}`,
+                        background: sel ? '#FFE600' : 'transparent',
+                        color: sel ? '#07070d' : 'rgba(255,255,255,0.6)',
+                        cursor: dim ? 'default' : 'pointer', opacity: dim ? 0.35 : 1,
+                        transition: 'all 150ms', borderRadius: 0, letterSpacing: 0.5,
+                      }}>{em}</button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* CATCHPHRASE */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>CATCHPHRASE</label>
+                <input
+                  type="text"
+                  value={catchphrase}
+                  onChange={e => setCatchphrase(e.target.value.slice(0, 50))}
+                  placeholder="你的角色的口頭禪..."
+                  style={inputStyle}
+                  maxLength={50}
+                  onFocus={e => (e.target.style.borderColor = '#FFE600')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
+                />
+                <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.3)', margin: '4px 0 0', textAlign: 'right' }}>
+                  {catchphrase.length} / 50
+                </p>
+              </div>
+
+              {/* WORLD ORIGIN & RACE */}
+              <div style={{ display: 'grid', gap: 16, marginBottom: 20 }} className="grid-cols-1 sm:grid-cols-2">
+                <div>
+                  <label style={labelStyle}>WORLD ORIGIN</label>
+                  <input type="text" value={worldOrigin} onChange={e => setWorldOrigin(e.target.value)}
+                    placeholder="來自什麼世界 / 宇宙..." style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = '#FFE600')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+                </div>
+                <div>
+                  <label style={labelStyle}>RACE</label>
+                  <input type="text" value={race} onChange={e => setRace(e.target.value)}
+                    placeholder="種族，例如：人類、精靈、機器人..." style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = '#FFE600')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+                </div>
+              </div>
+
+              {/* OCCUPATION & WEAKNESSES */}
+              <div style={{ display: 'grid', gap: 16, marginBottom: 20 }} className="grid-cols-1 sm:grid-cols-2">
+                <div>
+                  <label style={labelStyle}>OCCUPATION</label>
+                  <input type="text" value={occupation} onChange={e => setOccupation(e.target.value)}
+                    placeholder="職業，例如：魔法師、偵探、學生..." style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = '#FFE600')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+                </div>
+                <div>
+                  <label style={labelStyle}>WEAKNESSES</label>
+                  <input type="text" value={weaknesses} onChange={e => setWeaknesses(e.target.value)}
+                    placeholder="弱點..." style={inputStyle}
+                    onFocus={e => (e.target.style.borderColor = '#FFE600')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+                </div>
+              </div>
+
+              {/* ABILITIES */}
+              <div>
+                <label style={labelStyle}>ABILITIES</label>
+                <input type="text" value={abilities} onChange={e => setAbilities(e.target.value)}
+                  placeholder="技能，用逗號分隔，例如：飛行, 讀心術, 變身" style={inputStyle}
+                  onFocus={e => (e.target.style.borderColor = '#FFE600')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')} />
+                <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.3)', margin: '4px 0 0' }}>
+                  Separate abilities with commas — displayed as pills on the public page
+                </p>
               </div>
             </div>
 

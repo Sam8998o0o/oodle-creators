@@ -23,6 +23,14 @@ interface Character {
   created_at: string
   slug: string
   user_id: string
+  personality:  string[] | null
+  emotions:     string[] | null
+  catchphrase:  string | null
+  world_origin: string | null
+  race:         string | null
+  occupation:   string | null
+  abilities:    string | null
+  weaknesses:   string | null
 }
 
 async function getCharacter(slug: string): Promise<Character | null> {
@@ -243,6 +251,140 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
                     {tag}
                   </span>
                 ))}
+              </div>
+            )}
+
+            {/* CHARACTER PROFILE */}
+            {(
+              (char.personality?.length ?? 0) > 0 ||
+              (char.emotions?.length ?? 0) > 0 ||
+              !!char.catchphrase ||
+              !!char.world_origin ||
+              !!char.race ||
+              !!char.occupation ||
+              !!char.abilities ||
+              !!char.weaknesses
+            ) && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 24 }}>
+                <p style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 10,
+                  color: 'rgba(255,255,255,0.35)',
+                  margin: '0 0 20px',
+                  letterSpacing: 1,
+                }}>✦ CHARACTER PROFILE</p>
+
+                {/* Personality pills */}
+                {(char.personality?.length ?? 0) > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 8, color: 'rgba(255,255,255,0.35)', margin: '0 0 8px', letterSpacing: 1 }}>PERSONALITY</p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {char.personality!.map(p => (
+                        <span key={p} style={{
+                          fontFamily: 'var(--font-pixel), monospace',
+                          fontSize: 9,
+                          padding: '6px 12px',
+                          background: '#FFE600',
+                          color: '#07070d',
+                          letterSpacing: 0.5,
+                        }}>{p}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Emotions pills */}
+                {(char.emotions?.length ?? 0) > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 8, color: 'rgba(255,255,255,0.35)', margin: '0 0 8px', letterSpacing: 1 }}>EMOTIONS</p>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {char.emotions!.map(em => (
+                        <span key={em} style={{
+                          fontFamily: 'var(--font-body), sans-serif',
+                          fontSize: 13,
+                          padding: '5px 12px',
+                          background: 'rgba(255,255,255,0.05)',
+                          color: 'rgba(255,255,255,0.8)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                        }}>{em}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Catchphrase */}
+                {char.catchphrase && (
+                  <div style={{ position: 'relative', borderLeft: '3px solid #FFE600', paddingLeft: 16, margin: '0 0 20px' }}>
+                    <span style={{
+                      fontFamily: 'Georgia, serif',
+                      fontSize: 48,
+                      color: '#FFE600',
+                      lineHeight: 1,
+                      position: 'absolute',
+                      top: -8,
+                      left: 10,
+                      opacity: 0.3,
+                      userSelect: 'none',
+                    }}>&quot;</span>
+                    <p style={{
+                      fontFamily: 'var(--font-body), sans-serif',
+                      fontSize: 16,
+                      color: '#FFE600',
+                      fontStyle: 'italic',
+                      margin: 0,
+                      paddingTop: 6,
+                      lineHeight: 1.7,
+                    }}>{char.catchphrase}</p>
+                  </div>
+                )}
+
+                {/* Stats grid */}
+                {(char.world_origin || char.race || char.occupation || char.abilities) && (
+                  <div style={{ display: 'grid', gap: 20, marginBottom: 16 }} className="grid-cols-1 sm:grid-cols-2">
+                    {char.world_origin && (
+                      <div>
+                        <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 8, color: 'rgba(255,255,255,0.35)', margin: '0 0 6px', letterSpacing: 1 }}>WORLD</p>
+                        <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.7)', margin: 0 }}>{char.world_origin}</p>
+                      </div>
+                    )}
+                    {char.race && (
+                      <div>
+                        <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 8, color: 'rgba(255,255,255,0.35)', margin: '0 0 6px', letterSpacing: 1 }}>RACE</p>
+                        <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.7)', margin: 0 }}>{char.race}</p>
+                      </div>
+                    )}
+                    {char.occupation && (
+                      <div>
+                        <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 8, color: 'rgba(255,255,255,0.35)', margin: '0 0 6px', letterSpacing: 1 }}>OCCUPATION</p>
+                        <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.7)', margin: 0 }}>{char.occupation}</p>
+                      </div>
+                    )}
+                    {char.abilities && (
+                      <div>
+                        <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 8, color: 'rgba(255,255,255,0.35)', margin: '0 0 6px', letterSpacing: 1 }}>ABILITIES</p>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {char.abilities.split(',').map(a => a.trim()).filter(Boolean).map(a => (
+                            <span key={a} style={{
+                              fontFamily: 'var(--font-body), sans-serif',
+                              fontSize: 12,
+                              padding: '4px 10px',
+                              border: '1px solid rgba(255,255,255,0.15)',
+                              color: 'rgba(255,255,255,0.6)',
+                            }}>{a}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Weaknesses */}
+                {char.weaknesses && (
+                  <div>
+                    <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 8, color: 'rgba(255,255,255,0.35)', margin: '0 0 6px', letterSpacing: 1 }}>WEAKNESSES</p>
+                    <p style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.6)', margin: 0, lineHeight: 1.7 }}>{char.weaknesses}</p>
+                  </div>
+                )}
               </div>
             )}
 
