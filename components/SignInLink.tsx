@@ -8,10 +8,19 @@ export default function SignInLink() {
   const [signedIn, setSignedIn] = useState(false)
 
   useEffect(() => {
+    // Set initial state from the current session
     supabase.auth.getUser().then(({ data: { user } }) => {
       setSignedIn(!!user)
       setChecked(true)
     })
+
+    // Keep in sync with auth changes (e.g. sign-out re-shows the link)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(!!session?.user)
+      setChecked(true)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   // Render nothing until auth state is known, and hide completely when signed in
