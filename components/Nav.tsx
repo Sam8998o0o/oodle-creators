@@ -332,6 +332,33 @@ export default function Nav() {
                         ▶ MY PROFILE
                       </Link>
 
+                      {/* My Feed */}
+                      <Link
+                        href="/feed"
+                        onClick={() => setDropdownOpen(false)}
+                        style={{
+                          display: 'block',
+                          padding: '12px 16px',
+                          fontFamily: 'var(--font-pixel), monospace',
+                          fontSize: 8,
+                          color: 'rgba(255,255,255,0.65)',
+                          textDecoration: 'none',
+                          letterSpacing: 1,
+                          borderBottom: '1px solid rgba(255,255,255,0.07)',
+                          transition: 'color 150ms, background 150ms',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = '#FFE600'
+                          e.currentTarget.style.background = 'rgba(255,230,0,0.04)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = 'rgba(255,255,255,0.65)'
+                          e.currentTarget.style.background = 'none'
+                        }}
+                      >
+                        ▶ MY FEED
+                      </Link>
+
                       {/* Sign out */}
                       <button
                         onClick={async () => {
@@ -523,6 +550,32 @@ export default function Nav() {
                 }}
               >
                 ▶ MY PROFILE
+              </Link>
+              <Link
+                href="/feed"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 9,
+                  color: 'rgba(255,255,255,0.75)',
+                  textDecoration: 'none',
+                  padding: '14px 16px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  letterSpacing: 1,
+                  display: 'block',
+                  textAlign: 'center',
+                  transition: 'color 150ms, border-color 150ms',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = '#FFE600'
+                  e.currentTarget.style.borderColor = '#FFE600'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.75)'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                }}
+              >
+                ▶ MY FEED
               </Link>
               <button
                 onClick={async () => { setMobileMenuOpen(false); await signOut() }}
