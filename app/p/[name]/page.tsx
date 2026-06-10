@@ -76,6 +76,27 @@ async function getPosts(characterId: string): Promise<CharacterPost[]> {
   return (data ?? []) as CharacterPost[]
 }
 
+interface CharacterUniverse {
+  id: string
+  name: string
+  slug: string
+  cover_image_url: string | null
+}
+
+async function getCharacterUniverses(characterId: string): Promise<CharacterUniverse[]> {
+  const { data } = await supabase
+    .from('universe_characters')
+    .select('universes ( id, name, slug, cover_image_url )')
+    .eq('character_id', characterId)
+    .limit(6)
+
+  if (!data) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any[])
+    .map(r => r.universes)
+    .filter(Boolean) as CharacterUniverse[]
+}
+
 async function getComments(characterId: string): Promise<Comment[]> {
   const { data } = await supabase
     .from('character_comments')
@@ -134,11 +155,12 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
   const char = await getCharacter(name)
   if (!char) notFound()
 
-  const [related, media, posts, comments] = await Promise.all([
+  const [related, media, posts, comments, charUniverses] = await Promise.all([
     getRelated(char.user_id, char.id),
     getMedia(char.id),
     getPosts(char.id),
     getComments(char.id),
+    getCharacterUniverses(char.id),
   ])
   const shareUrl = `https://oodle-creators.vercel.app/p/${char.slug}`
   const tweetText = `Check out ${char.character_name} on Oodle Creators! ${shareUrl}`
@@ -451,6 +473,70 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
               characterId={char.id}
               initialComments={comments}
             />
+
+            {/* Universes this character belongs to */}
+            {charUniverses.length > 0 && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 24 }}>
+                <p style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 10,
+                  color: 'rgba(255,255,255,0.35)',
+                  margin: '0 0 16px',
+                  letterSpacing: 1,
+                }}>
+                  ✦ UNIVERSES
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {charUniverses.map(u => (
+                    <Link
+                      key={u.id}
+                      href={`/u/${u.slug}`}
+                      className="character-card"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: '10px 14px',
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <div style={{
+                        width: 40,
+                        height: 40,
+                        background: '#0e0e1a',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}>
+                        {u.cover_image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={u.cover_image_url}
+                            alt={u.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 18, opacity: 0.35 }}>🌐</span>
+                        )}
+                      </div>
+                      <span style={{
+                        fontFamily: 'var(--font-pixel), monospace',
+                        fontSize: 9,
+                        color: '#ffffff',
+                        letterSpacing: 0.5,
+                        lineHeight: 1.6,
+                      }}>
+                        {u.name}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Talent section */}
             {char.has_talent && (

@@ -8,6 +8,7 @@ import type { User } from '@supabase/supabase-js'
 
 const CENTER_LINKS = [
   { label: 'GALLERY',      href: '/gallery' },
+  { label: 'UNIVERSES',    href: '/universes' },
   { label: 'HOW IT WORKS', href: '/#how-it-works' },
   { label: 'MONETIZE',     href: '/#monetize' },
   { label: 'ROADMAP',      href: '/#roadmap' },
@@ -382,6 +383,33 @@ export default function Nav() {
                         ▶ MY FEED
                       </Link>
 
+                      {/* My Universes */}
+                      <Link
+                        href="/universes?filter=mine"
+                        onClick={() => setDropdownOpen(false)}
+                        style={{
+                          display: 'block',
+                          padding: '12px 16px',
+                          fontFamily: 'var(--font-pixel), monospace',
+                          fontSize: 8,
+                          color: 'rgba(255,255,255,0.65)',
+                          textDecoration: 'none',
+                          letterSpacing: 1,
+                          borderBottom: '1px solid rgba(255,255,255,0.07)',
+                          transition: 'color 150ms, background 150ms',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = '#FFE600'
+                          e.currentTarget.style.background = 'rgba(255,230,0,0.04)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = 'rgba(255,255,255,0.65)'
+                          e.currentTarget.style.background = 'none'
+                        }}
+                      >
+                        ▶ MY UNIVERSES
+                      </Link>
+
                       {/* Sign out */}
                       <button
                         onClick={async () => {
@@ -622,6 +650,32 @@ export default function Nav() {
                 }}
               >
                 ▶ MY FEED
+              </Link>
+              <Link
+                href="/universes?filter=mine"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 9,
+                  color: 'rgba(255,255,255,0.75)',
+                  textDecoration: 'none',
+                  padding: '14px 16px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  letterSpacing: 1,
+                  display: 'block',
+                  textAlign: 'center',
+                  transition: 'color 150ms, border-color 150ms',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = '#FFE600'
+                  e.currentTarget.style.borderColor = '#FFE600'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.75)'
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                }}
+              >
+                ▶ MY UNIVERSES
               </Link>
               <button
                 onClick={async () => { setMobileMenuOpen(false); await signOut() }}
