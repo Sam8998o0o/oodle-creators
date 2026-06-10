@@ -7,6 +7,7 @@ import LikeFollowButtons from '../../../components/LikeFollowButtons'
 import CharacterCard from '../../../components/CharacterCard'
 import { formatDate } from '../../../lib/utils'
 import CreatorToolbar from '../../../components/CreatorToolbar'
+import MediaGallery, { type MediaItem } from '../../../components/MediaGallery'
 
 interface Character {
   id: string
@@ -54,6 +55,15 @@ async function getRelated(userId: string, charId: string): Promise<Character[]> 
   return (data ?? []) as Character[]
 }
 
+async function getMedia(characterId: string): Promise<MediaItem[]> {
+  const { data } = await supabase
+    .from('character_media')
+    .select('id, file_url, file_type, caption, created_at')
+    .eq('character_id', characterId)
+    .order('created_at', { ascending: false })
+  return (data ?? []) as MediaItem[]
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }): Promise<Metadata> {
   const { name } = await params
   const char = await getCharacter(name)
@@ -92,7 +102,10 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
   const char = await getCharacter(name)
   if (!char) notFound()
 
-  const related = await getRelated(char.user_id, char.id)
+  const [related, media] = await Promise.all([
+    getRelated(char.user_id, char.id),
+    getMedia(char.id),
+  ])
   const shareUrl = `https://oodle-creators.vercel.app/p/${char.slug}`
   const tweetText = `Check out ${char.character_name} on Oodle Creators! ${shareUrl}`
 
@@ -388,6 +401,9 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
               </div>
             )}
 
+            {/* Gallery */}
+            <MediaGallery items={media} characterName={char.character_name} />
+
             {/* Talent section */}
             {char.has_talent && (
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 24 }}>
@@ -465,7 +481,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
       </div>
 
       {/* Shown only to the character owner — client-side auth check */}
-      <CreatorToolbar userId={char.user_id} slug={char.slug} />
+      <CreatorToolbar userId={char.user_id} slug={char.slug} characterId={char.id} />
     </div>
   )
 }

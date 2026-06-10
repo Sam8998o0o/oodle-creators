@@ -4,20 +4,24 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
+import MediaUploader from './MediaUploader'
 
 interface Props {
   /** character.user_id — checked against the current session to gate visibility */
   userId: string
   /** character.slug — used for the edit link and share URL */
   slug: string
+  /** character.id — used for media upload */
+  characterId: string
 }
 
-export default function CreatorToolbar({ userId, slug }: Props) {
+export default function CreatorToolbar({ userId, slug, characterId }: Props) {
   const [ownerChecked,    setOwnerChecked]    = useState(false)
   const [isOwner,         setIsOwner]         = useState(false)
   const [toastVisible,    setToastVisible]    = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleting,        setDeleting]        = useState(false)
+  const [mediaOpen,       setMediaOpen]       = useState(false)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
 
@@ -123,6 +127,12 @@ export default function CreatorToolbar({ userId, slug }: Props) {
           <span>BRING TO GAME</span>
         </Link>
 
+        {/* ADD MEDIA — opens upload modal */}
+        <button type="button" onClick={() => setMediaOpen(true)} className="creator-toolbar-btn">
+          <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>📷</span>
+          <span>ADD MEDIA</span>
+        </button>
+
         {/* DELETE — opens confirmation modal */}
         <button
           type="button"
@@ -219,6 +229,15 @@ export default function CreatorToolbar({ userId, slug }: Props) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Media uploader modal ─────────────────────────────── */}
+      {mediaOpen && (
+        <MediaUploader
+          characterId={characterId}
+          onClose={() => setMediaOpen(false)}
+          onUploadComplete={() => router.refresh()}
+        />
       )}
     </>
   )
