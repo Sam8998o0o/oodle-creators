@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { supabase } from '../../lib/supabase'
+import { supabase, getProfile } from '../../lib/supabase'
 import { formatNumber } from '../../lib/utils'
 import CharacterCard from '../../components/CharacterCard'
 import type { User } from '@supabase/supabase-js'
@@ -32,7 +32,8 @@ export default function ProfilePage() {
   const [imgError,        setImgError]        = useState(false)
   const [avatarHovered,   setAvatarHovered]   = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
-  const [avatarError,     setAvatarError]     = useState<string | null>(null)
+  const [avatarError,      setAvatarError]      = useState<string | null>(null)
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null)
 
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
@@ -42,6 +43,7 @@ export default function ProfilePage() {
       if (!user) { router.replace('/'); return }
       setUser(user)
       fetchCharacters(user.id)
+      getProfile(user.id).then(p => setProfileAvatarUrl(p?.avatar_url ?? null))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -131,23 +133,24 @@ export default function ProfilePage() {
     // Cache-bust so the browser fetches the new image, not the old cached one
     const publicUrl = `${rawUrl}?v=${Date.now()}`
 
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: { avatar_url: publicUrl },
-    })
+    // Persist to profiles table instead of user_metadata — Google OAuth
+    // overwrites user_metadata on every sign-in, so storing the custom
+    // avatar there would cause it to be lost after re-authentication.
+    const { error: saveError } = await supabase
+      .from('profiles')
+      .upsert({ id: user.id, avatar_url: publicUrl, updated_at: new Date().toISOString() })
 
-    if (updateError) {
-      setAvatarError(`Failed to save: ${updateError.message}`)
+    if (saveError) {
+      setAvatarError(`Failed to save: ${saveError.message}`)
       setAvatarUploading(false)
       return
     }
 
-    // Refresh user state so the new avatar_url is reflected immediately
-    const { data: { user: freshUser } } = await supabase.auth.getUser()
-    if (freshUser) setUser(freshUser)
+    setProfileAvatarUrl(publicUrl)
     setImgError(false)
     setAvatarUploading(false)
 
-    // Tell Nav to re-fetch user so it shows the new avatar too
+    // Tell Nav to re-fetch the profiles row so it shows the new avatar too
     window.dispatchEvent(new Event('avatar-updated'))
   }
 
@@ -157,7 +160,10 @@ export default function ProfilePage() {
   const displayName = (user?.user_metadata?.full_name as string | undefined)
     ?? user?.email?.split('@')[0]
     ?? 'USER'
-  const avatarUrl   = user?.user_metadata?.avatar_url as string | undefined
+  // Prefer the profiles-table avatar over the Google OAuth one in user_metadata.
+  const avatarUrl: string | undefined =
+    profileAvatarUrl ??
+    (user?.user_metadata?.avatar_url as string | undefined)
   const initial     = displayName[0]?.toUpperCase() ?? 'U'
 
   /* ── Shared menu item styles ── */

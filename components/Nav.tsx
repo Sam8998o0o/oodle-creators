@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { supabase } from '../lib/supabase'
+import { supabase, getProfile } from '../lib/supabase'
 import { signInWithGoogle, signOut } from '../lib/auth'
 import type { User } from '@supabase/supabase-js'
 
@@ -33,19 +33,28 @@ export default function Nav() {
   const [signingIn,      setSigningIn]      = useState(false)
   const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false)
   const [avatarHovered,   setAvatarHovered]   = useState(false)
-  const [imgError,        setImgError]        = useState(false)
+  const [imgError,         setImgError]         = useState(false)
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null)
 
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  /* Auth subscription */
+  /* Auth subscription + profile fetch */
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      if (user) getProfile(user.id).then(p => setProfileAvatarUrl(p?.avatar_url ?? null))
+    })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setImgError(false)  // reset on every auth change so a new user starts fresh
-      // Close modal whenever a session appears (covers the OAuth redirect-back case)
-      if (session?.user) setModalOpen(false)
+      const u = session?.user ?? null
+      setUser(u)
+      setImgError(false)
+      if (u) {
+        setModalOpen(false)
+        getProfile(u.id).then(p => setProfileAvatarUrl(p?.avatar_url ?? null))
+      } else {
+        setProfileAvatarUrl(null)  // clear on sign-out
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -82,15 +91,14 @@ export default function Nav() {
     return () => window.removeEventListener('open-sign-in-modal', onOpenModal)
   }, [])
 
-  /* Re-fetch user when avatar is updated from the profile page.
-     supabase.auth.updateUser() fires USER_UPDATED but the local session
-     may lag — a fresh getUser() is the most reliable way to pick up
-     the new avatar_url immediately. */
+  /* Re-fetch the profiles row when the profile page finishes an avatar upload. */
   useEffect(() => {
-    function onAvatarUpdated() {
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        if (user) { setUser(user); setImgError(false) }
-      })
+    async function onAvatarUpdated() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const profile = await getProfile(user.id)
+      setProfileAvatarUrl(profile?.avatar_url ?? null)
+      setImgError(false)
     }
     window.addEventListener('avatar-updated', onAvatarUpdated)
     return () => window.removeEventListener('avatar-updated', onAvatarUpdated)
@@ -99,7 +107,11 @@ export default function Nav() {
   const displayName = (user?.user_metadata?.full_name as string | undefined)
     ?? user?.email?.split('@')[0]
     ?? 'USER'
-  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined
+  // Custom-uploaded avatar (profiles table) takes priority over the Google
+  // OAuth photo stored in user_metadata, which gets overwritten on every sign-in.
+  const avatarUrl: string | undefined =
+    profileAvatarUrl ??
+    (user?.user_metadata?.avatar_url as string | undefined)
 
   return (
     <>
