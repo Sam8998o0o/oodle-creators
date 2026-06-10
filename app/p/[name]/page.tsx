@@ -9,6 +9,7 @@ import { formatDate } from '../../../lib/utils'
 import CreatorToolbar from '../../../components/CreatorToolbar'
 import MediaGallery, { type MediaItem } from '../../../components/MediaGallery'
 import CharacterPosts, { type CharacterPost } from '../../../components/CharacterPosts'
+import CharacterComments, { type Comment } from '../../../components/CharacterComments'
 
 interface Character {
   id: string
@@ -75,6 +76,26 @@ async function getPosts(characterId: string): Promise<CharacterPost[]> {
   return (data ?? []) as CharacterPost[]
 }
 
+async function getComments(characterId: string): Promise<Comment[]> {
+  const { data } = await supabase
+    .from('character_comments')
+    .select('id, content, created_at, user_id, profiles ( display_name, avatar_url )')
+    .eq('character_id', characterId)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (!data) return []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any[]).map(c => ({
+    id:           c.id          as string,
+    content:      c.content     as string,
+    created_at:   c.created_at  as string,
+    user_id:      c.user_id     as string,
+    display_name: (c.profiles as { display_name: string | null } | null)?.display_name ?? null,
+    avatar_url:   (c.profiles as { avatar_url:   string | null } | null)?.avatar_url   ?? null,
+  }))
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }): Promise<Metadata> {
   const { name } = await params
   const char = await getCharacter(name)
@@ -113,10 +134,11 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
   const char = await getCharacter(name)
   if (!char) notFound()
 
-  const [related, media, posts] = await Promise.all([
+  const [related, media, posts, comments] = await Promise.all([
     getRelated(char.user_id, char.id),
     getMedia(char.id),
     getPosts(char.id),
+    getComments(char.id),
   ])
   const shareUrl = `https://oodle-creators.vercel.app/p/${char.slug}`
   const tweetText = `Check out ${char.character_name} on Oodle Creators! ${shareUrl}`
@@ -422,6 +444,12 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
               characterName={char.character_name}
               creatorName={char.creator_name}
               characterImageUrl={char.image_url}
+            />
+
+            {/* Comments */}
+            <CharacterComments
+              characterId={char.id}
+              initialComments={comments}
             />
 
             {/* Talent section */}
