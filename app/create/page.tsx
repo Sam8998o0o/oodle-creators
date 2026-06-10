@@ -11,8 +11,8 @@ import CharacterCard from '../../components/CharacterCard'
 
 const STYLE_TAGS = ['Hand-drawn', 'Digital Art', 'AI Generated', '3D', 'Photography', 'Other']
 
-const PERSONALITY_OPTIONS = ['開朗', '神秘', '傲嬌', '溫柔', '瘋狂', '冷酷', '搞笑', '勇敢', '膽小', '邪惡']
-const EMOTION_OPTIONS     = ['😄 愛笑', '😤 易怒', '🥺 敏感', '😎 酷酷的', '😈 壞壞的', '🤩 自戀', '😴 懶惰', '🔥 熱血']
+const PERSONALITY_OPTIONS = ['Cheerful', 'Mysterious', 'Tsundere', 'Gentle', 'Crazy', 'Cold', 'Funny', 'Brave', 'Timid', 'Evil']
+const EMOTION_OPTIONS     = ['😄 Cheerful', '😤 Irritable', '🥺 Sensitive', '😎 Cool', '😈 Mischievous', '🤩 Narcissistic', '😴 Lazy', '🔥 Passionate']
 
 interface Errors {
   image?: string
@@ -162,7 +162,7 @@ export default function CreatePage() {
         world_origin:   worldOrigin.trim() || null,
         race:           race.trim() || null,
         occupation:     occupation.trim() || null,
-        abilities:      abilities.trim() || null,
+        abilities:      abilities.split(',').map(a => a.trim()).filter(Boolean),
         weaknesses:     weaknesses.trim() || null,
       })
       .select('slug')
