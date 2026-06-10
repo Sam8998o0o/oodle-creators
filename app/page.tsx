@@ -3,10 +3,11 @@ import CharacterCard from '../components/CharacterCard'
 import SignInLink from '../components/SignInLink'
 import HeroCTAButton from '../components/HeroCTAButton'
 import HowItWorks from '../components/HowItWorks'
+import { supabase } from '../lib/supabase'
 
-/* ── Mock data ────────────────────────────────────────── */
+/* ── Mock data (fallback when no real characters exist) ── */
 
-const HERO_CHIPS = [
+const HERO_CHIPS_FALLBACK = [
   '🐉 Drakeling · @dragonart ❤ 2.4k',
   '🌸 Sakura Ghost · @yuuki ❤ 1.8k',
   '🤖 Neon Rex · @cyberdraw ❤ 3.1k',
@@ -16,6 +17,26 @@ const HERO_CHIPS = [
   '🔥 Ember · @emberstudio ❤ 1.1k',
   '⚡ Zappix · @zapworks ❤ 543',
 ]
+
+function formatLikes(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
+async function getHeroChips(): Promise<string[]> {
+  const { data } = await supabase
+    .from('characters')
+    .select('id, character_name, creator_name, likes, image_url, slug')
+    .eq('is_public', true)
+    .order('likes', { ascending: false })
+    .limit(12)
+
+  if (!data || data.length === 0) return []
+
+  return data.map(c =>
+    `${c.character_name} · @${c.creator_name} ❤ ${formatLikes(c.likes ?? 0)}`
+  )
+}
 
 const MOCK_CHARACTERS = [
   { name: 'Drakeling',    handle: 'dragonart',     likes: 2400, fans: 341, emoji: '🐉' },
@@ -55,7 +76,18 @@ const Divider = () => (
 
 /* ── Page ─────────────────────────────────────────────── */
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const real = await getHeroChips()
+
+  // No real data → fall back to mock chips
+  // Too few → duplicate so the seamless loop has enough width
+  const heroChips =
+    real.length === 0
+      ? HERO_CHIPS_FALLBACK
+      : real.length < 6
+        ? [...real, ...real]
+        : real
+
   return (
     <div style={{ background: '#07070d' }}>
 
@@ -120,7 +152,7 @@ export default function LandingPage() {
           WebkitMaskImage: 'linear-gradient(to right, transparent, black 8%, black 92%, transparent)',
         }}>
           <div className="scroll-track" style={{ display: 'flex', width: 'max-content', flexWrap: 'nowrap', animation: 'scroll-left 30s linear infinite' }}>
-            {[...HERO_CHIPS, ...HERO_CHIPS].map((chip, i) => (
+            {[...heroChips, ...heroChips].map((chip, i) => (
               <span key={i} style={{
                 display: 'inline-flex',
                 alignItems: 'center',
