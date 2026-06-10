@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import CharacterCard from '../components/CharacterCard'
 import SignInLink from '../components/SignInLink'
+import HeroCTAButton from '../components/HeroCTAButton'
 import HowItWorks from '../components/HowItWorks'
 
 /* ── Mock data ────────────────────────────────────────── */
@@ -140,18 +141,7 @@ export default function LandingPage() {
 
         {/* CTAs */}
         <div className="fade-up delay-4 flex-col sm:flex-row" style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
-          <Link href="/create" style={{
-            fontFamily: 'var(--font-pixel), monospace',
-            fontSize: 11,
-            color: '#07070d',
-            background: '#FFE600',
-            textDecoration: 'none',
-            padding: '16px 28px',
-            letterSpacing: 1,
-            transition: 'opacity 150ms',
-          }}>
-            ✦ SHARE YOUR IP
-          </Link>
+          <HeroCTAButton />
           <Link href="/gallery" style={{
             fontFamily: 'var(--font-pixel), monospace',
             fontSize: 11,

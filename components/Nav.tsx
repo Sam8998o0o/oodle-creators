@@ -176,24 +176,47 @@ export default function Nav() {
           {/* Right side */}
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
             {/* SHARE YOUR IP — desktop only */}
-            <Link
-              href="/create"
-              className="hidden md:block"
-              style={{
-                fontFamily: 'var(--font-pixel), monospace',
-                fontSize: 8,
-                color: '#ffffff',
-                textDecoration: 'none',
-                padding: '9px 14px',
-                border: '1px solid rgba(255,255,255,0.25)',
-                letterSpacing: 1,
-                transition: 'border-color 150ms',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = '#FFE600')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)')}
-            >
-              SHARE YOUR IP
-            </Link>
+            {user ? (
+              <Link
+                href="/create"
+                className="hidden md:block"
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: '#ffffff',
+                  textDecoration: 'none',
+                  padding: '9px 14px',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  letterSpacing: 1,
+                  transition: 'border-color 150ms',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#FFE600')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)')}
+              >
+                SHARE YOUR IP
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="hidden md:block"
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: '#ffffff',
+                  background: 'none',
+                  padding: '9px 14px',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  letterSpacing: 1,
+                  cursor: 'pointer',
+                  transition: 'border-color 150ms',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#FFE600')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)')}
+              >
+                SHARE YOUR IP
+              </button>
+            )}
 
             {/* Avatar / SIGN IN — desktop only */}
             <div className="hidden md:flex items-center" style={{ gap: 10 }}>
@@ -479,24 +502,47 @@ export default function Nav() {
           </div>
 
           {/* SHARE YOUR IP CTA */}
-          <Link
-            href="/create"
-            onClick={() => setMobileMenuOpen(false)}
-            style={{
-              fontFamily: 'var(--font-pixel), monospace',
-              fontSize: 10,
-              color: '#07070d',
-              background: '#FFE600',
-              textDecoration: 'none',
-              padding: '16px 20px',
-              letterSpacing: 1,
-              textAlign: 'center',
-              marginBottom: 12,
-              display: 'block',
-            }}
-          >
-            ✦ SHARE YOUR IP
-          </Link>
+          {user ? (
+            <Link
+              href="/create"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 10,
+                color: '#07070d',
+                background: '#FFE600',
+                textDecoration: 'none',
+                padding: '16px 20px',
+                letterSpacing: 1,
+                textAlign: 'center',
+                marginBottom: 12,
+                display: 'block',
+              }}
+            >
+              ✦ SHARE YOUR IP
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => { setMobileMenuOpen(false); setModalOpen(true) }}
+              style={{
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 10,
+                color: '#07070d',
+                background: '#FFE600',
+                border: 'none',
+                padding: '16px 20px',
+                letterSpacing: 1,
+                textAlign: 'center',
+                marginBottom: 12,
+                display: 'block',
+                width: '100%',
+                cursor: 'pointer',
+              }}
+            >
+              ✦ SHARE YOUR IP
+            </button>
+          )}
 
           {/* Auth section */}
           {user ? (

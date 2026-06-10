@@ -1,6 +1,22 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+
 export default function SignInLink() {
+  const [checked,  setChecked]  = useState(false)
+  const [signedIn, setSignedIn] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setSignedIn(!!user)
+      setChecked(true)
+    })
+  }, [])
+
+  // Render nothing until auth state is known, and hide completely when signed in
+  if (!checked || signedIn) return null
+
   return (
     <button
       onClick={() => window.dispatchEvent(new Event('open-sign-in-modal'))}
