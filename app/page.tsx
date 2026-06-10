@@ -23,29 +23,35 @@ function formatLikes(n: number): string {
   return String(n)
 }
 
-async function getHeroChips(): Promise<string[]> {
+interface FeaturedCharacter {
+  id: string
+  character_name: string
+  creator_name: string
+  likes: number
+  fans: number
+  image_url: string | null
+  slug: string
+}
+
+const MOCK_CHARACTERS: FeaturedCharacter[] = [
+  { id: 'm1', character_name: 'Drakeling',    creator_name: 'dragonart',   likes: 2400, fans: 341, image_url: null, slug: '' },
+  { id: 'm2', character_name: 'Sakura Ghost', creator_name: 'yuuki',       likes: 1800, fans: 203, image_url: null, slug: '' },
+  { id: 'm3', character_name: 'Neon Rex',     creator_name: 'cyberdraw',   likes: 3100, fans: 512, image_url: null, slug: '' },
+  { id: 'm4', character_name: 'Foxy Lin',     creator_name: 'foxworks',    likes: 892,  fans: 98,  image_url: null, slug: '' },
+  { id: 'm5', character_name: 'Moonshard',    creator_name: 'lunarcreator',likes: 4200, fans: 721, image_url: null, slug: '' },
+  { id: 'm6', character_name: 'Masker',       creator_name: 'maskerdraw',  likes: 671,  fans: 87,  image_url: null, slug: '' },
+]
+
+async function getFeaturedCharacters(): Promise<FeaturedCharacter[]> {
   const { data } = await supabase
     .from('characters')
-    .select('id, character_name, creator_name, likes, image_url, slug')
+    .select('id, character_name, creator_name, likes, fans, image_url, slug')
     .eq('is_public', true)
     .order('likes', { ascending: false })
     .limit(12)
 
-  if (!data || data.length === 0) return []
-
-  return data.map(c =>
-    `${c.character_name} · @${c.creator_name} ❤ ${formatLikes(c.likes ?? 0)}`
-  )
+  return (data ?? []) as FeaturedCharacter[]
 }
-
-const MOCK_CHARACTERS = [
-  { name: 'Drakeling',    handle: 'dragonart',     likes: 2400, fans: 341, emoji: '🐉' },
-  { name: 'Sakura Ghost', handle: 'yuuki',          likes: 1800, fans: 203, emoji: '🌸' },
-  { name: 'Neon Rex',     handle: 'cyberdraw',      likes: 3100, fans: 512, emoji: '🤖' },
-  { name: 'Foxy Lin',     handle: 'foxworks',       likes: 892,  fans: 98,  emoji: '🦊' },
-  { name: 'Moonshard',    handle: 'lunarcreator',   likes: 4200, fans: 721, emoji: '🌙' },
-  { name: 'Masker',       handle: 'maskerdraw',     likes: 671,  fans: 87,  emoji: '🎭' },
-]
 
 const FEATURES = [
   { num: '01', icon: '🎨', title: 'ANY STYLE WELCOME',   desc: 'Hand-drawn, digital, AI-generated, 3D, photography — every style has a home here.' },
@@ -77,16 +83,21 @@ const Divider = () => (
 /* ── Page ─────────────────────────────────────────────── */
 
 export default async function LandingPage() {
-  const real = await getHeroChips()
+  const fetched = await getFeaturedCharacters()
 
-  // No real data → fall back to mock chips
-  // Too few → duplicate so the seamless loop has enough width
+  // Chip strings for the scrolling row — fall back to mock text when DB is empty
+  const realChips = fetched.map(c =>
+    `${c.character_name} · @${c.creator_name} ❤ ${formatLikes(c.likes ?? 0)}`
+  )
   const heroChips =
-    real.length === 0
+    realChips.length === 0
       ? HERO_CHIPS_FALLBACK
-      : real.length < 6
-        ? [...real, ...real]
-        : real
+      : realChips.length < 6
+        ? [...realChips, ...realChips]
+        : realChips
+
+  // Card data — use real characters if available, otherwise fall back to mock
+  const featuredChars = fetched.length > 0 ? fetched : MOCK_CHARACTERS
 
   return (
     <div style={{ background: '#07070d' }}>
@@ -225,40 +236,37 @@ export default async function LandingPage() {
       <Divider />
 
       {/* ── FEATURED CREATORS ───────────────────────────────── */}
-      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 24px' }}>
-        <div style={{ marginBottom: 48 }}>
+      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '80px 0' }}>
+        <div style={{ marginBottom: 32, padding: '0 24px' }}>
           <h2 style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 16, color: '#ffffff', margin: '0 0 12px' }}>
             FEATURED CREATORS
           </h2>
           <div style={{ width: 60, height: 3, background: '#FFE600' }} />
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-          gap: 1,
-          background: 'rgba(255,255,255,0.07)',
-        }}>
-          {MOCK_CHARACTERS.map(c => (
-            <div key={c.name} style={{ background: '#07070d' }}>
+        {/* Single horizontal scrolling row */}
+        <div
+          className="scrollable-pills"
+          style={{
+            display: 'flex',
+            gap: 1,
+            background: 'rgba(255,255,255,0.07)',
+            padding: '0 24px',
+          }}
+        >
+          {featuredChars.map(c => (
+            <div key={c.id} style={{ flexShrink: 0, width: 220, background: '#07070d' }}>
               <CharacterCard
-                characterName={c.name}
-                creatorHandle={c.handle}
+                characterName={c.character_name}
+                creatorHandle={c.creator_name}
+                imageUrl={c.image_url ?? undefined}
                 likes={c.likes}
                 fans={c.fans}
-                isVerified
+                slug={c.slug || undefined}
+                isVerified={!!c.slug}
               />
             </div>
           ))}
-          <div style={{ background: '#07070d' }}>
-            <CharacterCard
-              characterName="YOUR CHARACTER COULD BE HERE"
-              creatorHandle="you"
-              likes={0}
-              fans={0}
-              isCTA
-            />
-          </div>
         </div>
       </section>
 
