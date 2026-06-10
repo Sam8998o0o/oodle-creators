@@ -363,7 +363,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
                       <div>
                         <p style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 8, color: 'rgba(255,255,255,0.35)', margin: '0 0 6px', letterSpacing: 1 }}>ABILITIES</p>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {char.abilities.split(',').map(a => a.trim()).filter(Boolean).map(a => (
+                          {String(char.abilities).split(',').map(a => a.trim()).filter(Boolean).map(a => (
                             <span key={a} style={{
                               fontFamily: 'var(--font-body), sans-serif',
                               fontSize: 12,

@@ -92,7 +92,7 @@ export default function EditPage() {
       setWorldOrigin(char.world_origin ?? '')
       setRace(char.race ?? '')
       setOccupation(char.occupation ?? '')
-      setAbilities(char.abilities ?? '')
+      setAbilities(Array.isArray(char.abilities) ? (char.abilities as string[]).join(', ') : (char.abilities as string | null) ?? '')
       setWeaknesses(char.weaknesses ?? '')
       setFetchingData(false)
     }
