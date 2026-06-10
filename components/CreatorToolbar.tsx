@@ -14,9 +14,13 @@ interface Props {
   slug: string
   /** character.id — used for media upload */
   characterId: string
+  /** character.image_url — passed to Oodle game as ?image= param */
+  imageUrl: string | null
+  /** character.character_name — passed to Oodle game as ?name= param */
+  characterName: string
 }
 
-export default function CreatorToolbar({ userId, slug, characterId }: Props) {
+export default function CreatorToolbar({ userId, slug, characterId, imageUrl, characterName }: Props) {
   const [ownerChecked,    setOwnerChecked]    = useState(false)
   const [isOwner,         setIsOwner]         = useState(false)
   const [toastVisible,    setToastVisible]    = useState(false)
@@ -120,7 +124,7 @@ export default function CreatorToolbar({ userId, slug, characterId }: Props) {
 
         {/* BRING TO GAME */}
         <Link
-          href="https://oodle.vercel.app"
+          href={`https://oodle.vercel.app?from=oodle-creators${imageUrl ? `&image=${encodeURIComponent(imageUrl)}` : ''}&name=${encodeURIComponent(characterName)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="creator-toolbar-btn"

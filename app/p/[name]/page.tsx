@@ -615,7 +615,13 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
       </div>
 
       {/* Shown only to the character owner — client-side auth check */}
-      <CreatorToolbar userId={char.user_id} slug={char.slug} characterId={char.id} />
+      <CreatorToolbar
+        userId={char.user_id}
+        slug={char.slug}
+        characterId={char.id}
+        imageUrl={char.image_url}
+        characterName={char.character_name}
+      />
     </div>
   )
 }
