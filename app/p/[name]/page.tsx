@@ -6,6 +6,7 @@ import CopyLinkButton from '../../../components/CopyLinkButton'
 import LikeFollowButtons from '../../../components/LikeFollowButtons'
 import CharacterCard from '../../../components/CharacterCard'
 import { formatDate } from '../../../lib/utils'
+import CreatorToolbar from '../../../components/CreatorToolbar'
 
 interface Character {
   id: string
@@ -89,7 +90,7 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
 
   return (
     <div style={{ background: '#07070d', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px 96px' }}>
 
         <Link href="/gallery" style={{ fontFamily: 'var(--font-body), sans-serif', fontSize: 13, color: 'rgba(255,255,255,0.4)', textDecoration: 'none', display: 'inline-block', marginBottom: 32 }}>
           ← GALLERY
@@ -320,6 +321,9 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
           </div>
         )}
       </div>
+
+      {/* Shown only to the character owner — client-side auth check */}
+      <CreatorToolbar userId={char.user_id} slug={char.slug} />
     </div>
   )
 }
