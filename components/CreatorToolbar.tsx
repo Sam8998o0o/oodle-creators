@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import MediaUploader from './MediaUploader'
+import PostComposer from './PostComposer'
 
 interface Props {
   /** character.user_id — checked against the current session to gate visibility */
@@ -22,6 +23,7 @@ export default function CreatorToolbar({ userId, slug, characterId }: Props) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleting,        setDeleting]        = useState(false)
   const [mediaOpen,       setMediaOpen]       = useState(false)
+  const [postOpen,        setPostOpen]        = useState(false)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
 
@@ -126,6 +128,12 @@ export default function CreatorToolbar({ userId, slug, characterId }: Props) {
           <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>🎮</span>
           <span>BRING TO GAME</span>
         </Link>
+
+        {/* POST UPDATE — opens post composer */}
+        <button type="button" onClick={() => setPostOpen(true)} className="creator-toolbar-btn">
+          <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>📝</span>
+          <span>POST UPDATE</span>
+        </button>
 
         {/* ADD MEDIA — opens upload modal */}
         <button type="button" onClick={() => setMediaOpen(true)} className="creator-toolbar-btn">
@@ -237,6 +245,15 @@ export default function CreatorToolbar({ userId, slug, characterId }: Props) {
           characterId={characterId}
           onClose={() => setMediaOpen(false)}
           onUploadComplete={() => router.refresh()}
+        />
+      )}
+
+      {/* ── Post composer modal ──────────────────────────────── */}
+      {postOpen && (
+        <PostComposer
+          characterId={characterId}
+          onClose={() => setPostOpen(false)}
+          onPublished={() => router.refresh()}
         />
       )}
     </>

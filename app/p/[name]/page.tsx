@@ -8,6 +8,7 @@ import CharacterCard from '../../../components/CharacterCard'
 import { formatDate } from '../../../lib/utils'
 import CreatorToolbar from '../../../components/CreatorToolbar'
 import MediaGallery, { type MediaItem } from '../../../components/MediaGallery'
+import CharacterPosts, { type CharacterPost } from '../../../components/CharacterPosts'
 
 interface Character {
   id: string
@@ -64,6 +65,16 @@ async function getMedia(characterId: string): Promise<MediaItem[]> {
   return (data ?? []) as MediaItem[]
 }
 
+async function getPosts(characterId: string): Promise<CharacterPost[]> {
+  const { data } = await supabase
+    .from('character_posts')
+    .select('id, content, image_url, created_at')
+    .eq('character_id', characterId)
+    .order('created_at', { ascending: false })
+    .limit(20)
+  return (data ?? []) as CharacterPost[]
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }): Promise<Metadata> {
   const { name } = await params
   const char = await getCharacter(name)
@@ -102,9 +113,10 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
   const char = await getCharacter(name)
   if (!char) notFound()
 
-  const [related, media] = await Promise.all([
+  const [related, media, posts] = await Promise.all([
     getRelated(char.user_id, char.id),
     getMedia(char.id),
+    getPosts(char.id),
   ])
   const shareUrl = `https://oodle-creators.vercel.app/p/${char.slug}`
   const tweetText = `Check out ${char.character_name} on Oodle Creators! ${shareUrl}`
@@ -403,6 +415,14 @@ export default async function CharacterPage({ params }: { params: Promise<{ name
 
             {/* Gallery */}
             <MediaGallery items={media} characterName={char.character_name} />
+
+            {/* Posts feed */}
+            <CharacterPosts
+              posts={posts}
+              characterName={char.character_name}
+              creatorName={char.creator_name}
+              characterImageUrl={char.image_url}
+            />
 
             {/* Talent section */}
             {char.has_talent && (
