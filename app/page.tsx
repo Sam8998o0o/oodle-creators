@@ -2,6 +2,7 @@ import Link from 'next/link'
 import CharacterCard from '../components/CharacterCard'
 import SignInLink from '../components/SignInLink'
 import HeroCTAButton from '../components/HeroCTAButton'
+import PlayOodleButton from '../components/PlayOodleButton'
 import HowItWorks from '../components/HowItWorks'
 import { supabase } from '../lib/supabase'
 
@@ -391,18 +392,7 @@ export default async function LandingPage() {
             }}>
               Oodle is a browser-based pixel pet game. Upload your character here and it can come alive as a pixel pet in the game.
             </p>
-            <Link href="https://oodle.vercel.app" target="_blank" style={{
-              fontFamily: 'var(--font-pixel), monospace',
-              fontSize: 10,
-              color: '#ffffff',
-              textDecoration: 'none',
-              padding: '12px 22px',
-              border: '1px solid rgba(255,255,255,0.3)',
-              letterSpacing: 1,
-              transition: 'border-color 150ms',
-            }}>
-              PLAY OODLE →
-            </Link>
+            <PlayOodleButton />
           </div>
 
           {/* Pixel art placeholder */}

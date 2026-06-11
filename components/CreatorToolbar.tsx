@@ -55,6 +55,15 @@ export default function CreatorToolbar({ userId, slug, characterId, imageUrl, ch
     }
   }
 
+  async function handleBringToGame() {
+    const { data: { session } } = await supabase.auth.getSession()
+    const base = `https://oodle.vercel.app?from=oodle-creators${imageUrl ? `&image=${encodeURIComponent(imageUrl)}` : ''}&name=${encodeURIComponent(characterName)}`
+    const url = session
+      ? `${base}&access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`
+      : base
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   async function handleDelete() {
     setDeleting(true)
     const { error } = await supabase.from('characters').delete().eq('slug', slug)
@@ -123,15 +132,10 @@ export default function CreatorToolbar({ userId, slug, characterId, imageUrl, ch
         </button>
 
         {/* BRING TO GAME */}
-        <Link
-          href={`https://oodle.vercel.app?from=oodle-creators${imageUrl ? `&image=${encodeURIComponent(imageUrl)}` : ''}&name=${encodeURIComponent(characterName)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="creator-toolbar-btn"
-        >
+        <button type="button" onClick={handleBringToGame} className="creator-toolbar-btn">
           <span aria-hidden="true" style={{ fontSize: 18, lineHeight: 1 }}>🎮</span>
           <span>BRING TO GAME</span>
-        </Link>
+        </button>
 
         {/* POST UPDATE — opens post composer */}
         <button type="button" onClick={() => setPostOpen(true)} className="creator-toolbar-btn">
