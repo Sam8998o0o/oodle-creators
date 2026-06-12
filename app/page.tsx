@@ -55,10 +55,10 @@ async function getFeaturedCharacters(): Promise<FeaturedCharacter[]> {
 }
 
 const FEATURES = [
-  { num: '01', icon: '🎨', title: 'ANY STYLE WELCOME',   desc: 'Hand-drawn, digital, AI-generated, 3D, photography — every style has a home here.' },
-  { num: '02', icon: '🔍', title: 'GET DISCOVERED',      desc: 'Appear in the gallery, leaderboards, and search. Build your fanbase organically.' },
-  { num: '03', icon: '📢', title: 'SHARE YOUR IP',       desc: 'Get a public page, shareable link, and downloadable assets for your character.' },
-  { num: '04', icon: '💰', title: 'MONETIZE YOUR IP',    desc: 'Fan tips, merchandise drops, brand deals. Your IP, your income. (Coming Soon)' },
+  { num: '01', icon: '🎨', title: 'ANY STYLE WELCOME',   desc: 'Toys, plush dolls, mascots, healing characters, trendy figures, illustrated stories, pet universes — every IP has a place here.' },
+  { num: '02', icon: '🔍', title: 'GET DISCOVERED',      desc: 'Your character appears in our global gallery. Collectors, fans, and brands discover new IPs every day.' },
+  { num: '03', icon: '📢', title: 'SHARE YOUR IP',       desc: 'Get your own character page with shareable link, downloadable assets, and your IP story.' },
+  { num: '04', icon: '💰', title: 'MONETIZE YOUR IP',    desc: 'Fan tips, merchandise drops, brand licensing deals. Turn your character into a business. (Coming Soon)' },
 ]
 
 
@@ -124,7 +124,7 @@ export default async function LandingPage() {
           marginBottom: 32,
         }}>
           <span style={{ fontFamily: 'var(--font-pixel), monospace', fontSize: 9, color: '#FFE600', letterSpacing: 2 }}>
-            ✦ IP CHARACTER SHARING COMMUNITY
+            ✦ FOR CREATORS OF TOYS · PLUSH · MASCOTS · CHARACTERS
           </span>
         </div>
 
@@ -150,10 +150,36 @@ export default async function LandingPage() {
           color: 'rgba(255,255,255,0.6)',
           maxWidth: 580,
           lineHeight: 1.7,
-          margin: '0 0 40px',
+          margin: '0 0 24px',
         }}>
-          Upload your original character. Get discovered by fans. Build your audience. Monetize your IP.
+          Your original character deserves a home. Healing mascots, trendy designs, illustration stories, pet universes — upload your IP and get discovered by fans worldwide.
         </p>
+
+        {/* Character type pills */}
+        <div className="fade-up delay-2" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginBottom: 36 }}>
+          {[
+            { emoji: '🧸', label: 'Healing Mascots' },
+            { emoji: '🎨', label: 'Trendy Figures' },
+            { emoji: '📖', label: 'Illustration Stories' },
+            { emoji: '🐾', label: 'Pet Universe' },
+            { emoji: '🌟', label: 'Lifestyle Characters' },
+          ].map(pill => (
+            <span key={pill.label} style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '7px 14px',
+              background: 'rgba(255,230,0,0.07)',
+              border: '1px solid rgba(255,230,0,0.25)',
+              fontFamily: 'var(--font-body), sans-serif',
+              fontSize: 13,
+              color: '#FFE600',
+              whiteSpace: 'nowrap',
+            }}>
+              {pill.emoji} {pill.label}
+            </span>
+          ))}
+        </div>
 
         {/* Scrolling chip row */}
         <div className="fade-up delay-3" style={{

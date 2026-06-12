@@ -7,19 +7,19 @@ const STEPS = [
     num: '01',
     icon: '📤',
     title: 'UPLOAD YOUR CHARACTER',
-    desc: 'Upload any image of your original character — illustration, photo, AI art, sketch. Add a name, story, and style tags.',
+    desc: 'Upload any image of your character — plush doll photo, illustration, toy design, AI art. Add your character\'s name, backstory, and style.',
   },
   {
     num: '02',
     icon: '🌏',
     title: 'GET DISCOVERED',
-    desc: 'Your character appears in the public gallery instantly. Fans worldwide can like, follow, and share your IP.',
+    desc: 'Your character appears in the global gallery instantly. Collectors and fans worldwide discover and follow your IP.',
   },
   {
     num: '03',
     icon: '🚀',
     title: 'BUILD & MONETIZE',
-    desc: 'Grow your fanbase. Unlock creator tools, fan tips, merchandise drops, and brand deal opportunities.',
+    desc: 'Build your fanbase. Unlock merchandise drops, fan tips, and brand licensing opportunities.',
   },
 ]
 
