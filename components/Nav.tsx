@@ -152,7 +152,7 @@ export default function Nav() {
           </Link>
 
           {/* Center links — desktop only */}
-          <div style={{ display: 'flex', gap: 28, alignItems: 'center' }} className="hidden md:flex">
+          <div style={{ gap: 28, alignItems: 'center' }} className="hidden md:flex">
             {CENTER_LINKS.map(link => (
               <Link
                 key={link.label}
