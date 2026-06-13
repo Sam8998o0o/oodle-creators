@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 const STEPS = [
   {
@@ -34,28 +34,32 @@ const TOOLTIP_W = 440
 function clearHighlights() {
   document.querySelectorAll<HTMLElement>('[data-tour]').forEach(el => {
     el.style.boxShadow = ''
-    el.style.position = ''
-    el.style.zIndex = ''
+    el.style.position  = ''
+    el.style.zIndex    = ''
   })
   const nav = document.querySelector<HTMLElement>('nav')
   if (nav) nav.style.zIndex = ''
 }
 
 export default function OnboardingTour() {
+  // `checked` stays false until the localStorage read completes on the client.
+  // This prevents any flash during SSR/hydration and ensures returning users
+  // never see the overlay.
+  const [checked, setChecked] = useState(false)
   const [active,  setActive]  = useState(false)
   const [step,    setStep]    = useState(0)
   const [rect,    setRect]    = useState<DOMRect | null>(null)
   const [opacity, setOpacity] = useState(1)
-  const mountedRef = useRef(true)
 
-  useEffect(() => { return () => { mountedRef.current = false } }, [])
-
-  // Show tour for first-time visitors
+  // Client-only localStorage check — runs once after hydration
   useEffect(() => {
-    if (!localStorage.getItem('oodle-creators-onboarded')) setActive(true)
+    if (!localStorage.getItem('oodle-creators-onboarded')) {
+      setActive(true)
+    }
+    setChecked(true)
   }, [])
 
-  // Highlight the current step's target element
+  // Apply / remove highlight on the target nav element
   useEffect(() => {
     clearHighlights()
     if (!active) return
@@ -68,24 +72,23 @@ export default function OnboardingTour() {
 
     setRect(el.getBoundingClientRect())
     el.style.boxShadow = '0 0 0 3px #FFE600, 0 0 20px rgba(255,230,0,0.4)'
-    el.style.position   = 'relative'
-    el.style.zIndex     = '9992'
+    el.style.position  = 'relative'
+    el.style.zIndex    = '9992'
 
-    // Bring the nav above the overlay so the highlighted link is accessible
     const nav = document.querySelector<HTMLElement>('nav')
     if (nav) nav.style.zIndex = '9992'
 
     return () => { clearHighlights() }
   }, [step, active])
 
-  // Keep rect in sync with window size
+  // Keep tooltip position in sync with window size
   useEffect(() => {
     if (!active) return
     const target = STEPS[step].target
     if (!target) return
     function onResize() {
       const el = document.querySelector<HTMLElement>(target!)
-      if (el && mountedRef.current) setRect(el.getBoundingClientRect())
+      if (el) setRect(el.getBoundingClientRect())
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
@@ -95,24 +98,29 @@ export default function OnboardingTour() {
     clearHighlights()
     localStorage.setItem('oodle-creators-onboarded', 'true')
     setActive(false)
+    setOpacity(1)   // reset for safety
   }
 
   function advance() {
     setOpacity(0)
     setTimeout(() => {
-      if (!mountedRef.current) return
-      if (step >= STEPS.length - 1) { dismiss(); return }
+      // No mountedRef guard — in React 18 setState on an unmounted component
+      // is a silent no-op, and mountedRef breaks under Strict Mode double-invoke.
+      if (step >= STEPS.length - 1) {
+        dismiss()
+        return
+      }
       setStep(s => s + 1)
-      // Double rAF ensures browser paints new content at opacity-0 before fading in
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        if (mountedRef.current) setOpacity(1)
-      }))
+      // Double rAF: let the browser paint the new content at opacity-0 first
+      requestAnimationFrame(() => requestAnimationFrame(() => setOpacity(1)))
     }, 150)
   }
 
-  if (!active) return null
+  // Nothing to render until we've read localStorage (prevents SSR flash),
+  // and nothing to render if the user has already completed the tour.
+  if (!checked || !active) return null
 
-  const s = STEPS[step]
+  const s       = STEPS[step]
   const hasRect = rect != null && rect.width > 0 && rect.height > 0
 
   let tooltipTop  = 0
@@ -126,7 +134,6 @@ export default function OnboardingTour() {
       rect.left + rect.width / 2 - TOOLTIP_W / 2,
       window.innerWidth - TOOLTIP_W - 24,
     ))
-    // Clamp arrow so it stays inside the tooltip box
     arrowLeft = Math.max(20, Math.min(
       rect.left + rect.width / 2 - tooltipLeft,
       TOOLTIP_W - 20,
@@ -136,18 +143,17 @@ export default function OnboardingTour() {
 
   return (
     <>
-      {/* Dark overlay — click anywhere to skip */}
-      <div
-        onClick={dismiss}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(7,7,13,0.85)',
-          zIndex: 9990,
-        }}
-      />
+      {/* Visual dark overlay — pointer-events: none so the page stays clickable.
+          The tooltip below is the only interactive surface during the tour. */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(7,7,13,0.85)',
+        zIndex: 9990,
+        pointerEvents: 'none',
+      }} />
 
-      {/* Tooltip box */}
+      {/* Tooltip */}
       <div
         onClick={e => e.stopPropagation()}
         style={{
@@ -167,7 +173,7 @@ export default function OnboardingTour() {
           transition: 'opacity 150ms ease',
         }}
       >
-        {/* CSS triangle arrow — pointing UP toward the highlighted nav element */}
+        {/* CSS triangle arrow pointing UP toward the highlighted nav element */}
         {showArrow && (
           <div style={{
             position: 'absolute',
