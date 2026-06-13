@@ -7,11 +7,11 @@ import { signInWithGoogle, signOut } from '../lib/auth'
 import type { User } from '@supabase/supabase-js'
 
 const CENTER_LINKS = [
-  { label: 'GALLERY',      href: '/gallery' },
-  { label: 'UNIVERSES',    href: '/universes' },
-  { label: 'HOW IT WORKS', href: '/#how-it-works' },
-  { label: 'MONETIZE',     href: '/#monetize' },
-  { label: 'ROADMAP',      href: '/#roadmap' },
+  { label: 'GALLERY',      href: '/gallery',       tourId: 'gallery'    },
+  { label: 'UNIVERSES',    href: '/universes',      tourId: 'universes'  },
+  { label: 'HOW IT WORKS', href: '/#how-it-works',  tourId: undefined    },
+  { label: 'MONETIZE',     href: '/#monetize',      tourId: undefined    },
+  { label: 'ROADMAP',      href: '/#roadmap',       tourId: undefined    },
 ]
 
 /* ── Google icon SVG ─────────────────────────────────── */
@@ -157,6 +157,7 @@ export default function Nav() {
               <Link
                 key={link.label}
                 href={link.href}
+                data-tour={link.tourId}
                 style={{
                   fontFamily: 'var(--font-body), sans-serif',
                   fontSize: 11,
@@ -181,6 +182,7 @@ export default function Nav() {
               <Link
                 href="/create"
                 className="hidden md:block"
+                data-tour="share-ip"
                 style={{
                   fontFamily: 'var(--font-pixel), monospace',
                   fontSize: 8,
@@ -201,6 +203,7 @@ export default function Nav() {
                 type="button"
                 onClick={() => setModalOpen(true)}
                 className="hidden md:block"
+                data-tour="share-ip"
                 style={{
                   fontFamily: 'var(--font-pixel), monospace',
                   fontSize: 8,
