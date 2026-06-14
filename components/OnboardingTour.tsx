@@ -41,8 +41,7 @@ function clearHighlights() {
     el.style.position  = ''
     el.style.zIndex    = ''
   })
-  const nav = document.querySelector<HTMLElement>('nav')
-  if (nav) nav.style.zIndex = ''
+  // Nav z-index is permanently 100 in Nav.tsx — no longer modified here
 }
 
 export default function OnboardingTour() {
@@ -74,11 +73,7 @@ export default function OnboardingTour() {
     setRect(el.getBoundingClientRect())
     el.style.boxShadow = '0 0 0 3px #FFE600, 0 0 20px rgba(255,230,0,0.4)'
     el.style.position  = 'relative'
-    el.style.zIndex    = '9999'
-
-    // Bring the nav visually above the overlay
-    const nav = document.querySelector<HTMLElement>('nav')
-    if (nav) nav.style.zIndex = '9999'
+    el.style.zIndex    = '2'   // stacks above siblings inside the nav's stacking context
 
     return () => { clearHighlights() }
   }, [step, visible])
@@ -152,7 +147,7 @@ export default function OnboardingTour() {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: 9999,
+        zIndex: 41,
         background: '#07070d',
         borderTop:    '3px solid #FFE600',
         borderRight:  '1px solid rgba(255,255,255,0.1)',
@@ -237,7 +232,7 @@ export default function OnboardingTour() {
         position: 'fixed',
         inset: 0,
         background: 'rgba(0,0,0,0.5)',
-        zIndex: 9998,
+        zIndex: 40,
         pointerEvents: 'none',
       }} />
 
@@ -249,7 +244,7 @@ export default function OnboardingTour() {
         transform: hasRect ? 'none' : 'translate(-50%, -50%)',
         width: TOOLTIP_W,
         maxWidth: 'calc(100vw - 32px)',
-        zIndex: 9999,
+        zIndex: 41,
         pointerEvents: 'auto',
         background: '#07070d',
         borderTop:    '3px solid #FFE600',

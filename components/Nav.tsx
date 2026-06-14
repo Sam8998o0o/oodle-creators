@@ -121,7 +121,7 @@ export default function Nav() {
         position: 'fixed',
         top: 0, left: 0, right: 0,
         height: 64,
-        zIndex: 50,
+        zIndex: 100,
         background: 'rgba(7,7,13,0.92)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
         backdropFilter: 'blur(10px)',
