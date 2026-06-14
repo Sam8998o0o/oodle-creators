@@ -1,3 +1,5 @@
+export const revalidate = 0
+
 import { supabase } from '../../lib/supabase'
 import UniverseCard from '../../components/UniverseCard'
 import CreateUniverseButton from '../../components/CreateUniverseButton'
