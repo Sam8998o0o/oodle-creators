@@ -21,12 +21,17 @@ interface CharacterResult {
 }
 
 interface UniverseChar {
-  id: string        // universe_characters row id
+  id: string
   character_id: string
   character_name: string
   creator_name: string
   image_url: string | null
   slug: string
+}
+
+interface DeletionVote {
+  user_id: string
+  voted: boolean
 }
 
 export default function InvitePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -40,18 +45,23 @@ export default function InvitePage({ params }: { params: Promise<{ slug: string 
   const [query,         setQuery]         = useState('')
   const [searchResults, setSearchResults] = useState<CharacterResult[]>([])
   const [searching,     setSearching]     = useState(false)
-  const [adding,        setAdding]        = useState<string | null>(null)   // character_id being added
-  const [removing,      setRemoving]      = useState<string | null>(null)   // row id being removed
+  const [adding,        setAdding]        = useState<string | null>(null)
+  const [removing,      setRemoving]      = useState<string | null>(null)
 
-  const [members, setMembers] = useState<UniverseChar[]>([])
+  const [members,        setMembers]        = useState<UniverseChar[]>([])
   const [loadingMembers, setLoadingMembers] = useState(true)
 
-  // Resolve slug from params
+  // Delete universe state
+  const [userMembers,    setUserMembers]    = useState<{ user_id: string }[]>([])
+  const [pendingVotes,   setPendingVotes]   = useState<DeletionVote[]>([])
+  const [deleteModal,    setDeleteModal]    = useState<'solo' | 'members' | null>(null)
+  const [deleting,       setDeleting]       = useState(false)
+  const [sendingRequest, setSendingRequest] = useState(false)
+
   useEffect(() => {
     params.then(p => setSlug(p.slug))
   }, [params])
 
-  // Auth guard + owner check
   useEffect(() => {
     if (!slug) return
     async function init() {
@@ -77,7 +87,6 @@ export default function InvitePage({ params }: { params: Promise<{ slug: string 
     init()
   }, [slug, router])
 
-  // Load current universe characters
   const loadMembers = useCallback(async (universeId: string) => {
     setLoadingMembers(true)
     const { data } = await supabase
@@ -100,9 +109,29 @@ export default function InvitePage({ params }: { params: Promise<{ slug: string 
     setLoadingMembers(false)
   }, [])
 
+  // Load user-level members (for delete modal) and pending votes
+  const loadExtras = useCallback(async (universeId: string) => {
+    const [umRes, votesRes] = await Promise.all([
+      supabase
+        .from('universe_members')
+        .select('user_id')
+        .eq('universe_id', universeId)
+        .neq('role', 'owner'),
+      supabase
+        .from('universe_deletion_votes')
+        .select('user_id, voted')
+        .eq('universe_id', universeId),
+    ])
+    setUserMembers((umRes.data ?? []) as { user_id: string }[])
+    setPendingVotes((votesRes.data ?? []) as DeletionVote[])
+  }, [])
+
   useEffect(() => {
-    if (universe && isOwner) loadMembers(universe.id)
-  }, [universe, isOwner, loadMembers])
+    if (universe && isOwner) {
+      loadMembers(universe.id)
+      loadExtras(universe.id)
+    }
+  }, [universe, isOwner, loadMembers, loadExtras])
 
   // Character search
   useEffect(() => {
@@ -148,7 +177,43 @@ export default function InvitePage({ params }: { params: Promise<{ slug: string 
     setRemoving(null)
   }
 
+  function handleDeleteClick() {
+    setDeleteModal(userMembers.length === 0 ? 'solo' : 'members')
+  }
+
+  async function handleDelete() {
+    if (!universe) return
+    setDeleting(true)
+    const { error } = await supabase.from('universes').delete().eq('id', universe.id)
+    if (!error) {
+      router.push('/universes')
+    } else {
+      setDeleting(false)
+    }
+  }
+
+  async function handleSendDeletionRequest() {
+    if (!universe || userMembers.length === 0) return
+    setSendingRequest(true)
+
+    const rows = userMembers.map(m => ({
+      universe_id: universe.id,
+      user_id:     m.user_id,
+      voted:       false,
+    }))
+
+    await supabase
+      .from('universe_deletion_votes')
+      .upsert(rows, { onConflict: 'universe_id,user_id' })
+
+    setSendingRequest(false)
+    setDeleteModal(null)
+    router.push(`/u/${slug}`)
+  }
+
   if (!authChecked) return null
+
+  const agreedCount = pendingVotes.filter(v => v.voted).length
 
   return (
     <div style={{ background: '#07070d', minHeight: '100vh' }}>
@@ -382,7 +447,244 @@ export default function InvitePage({ params }: { params: Promise<{ slug: string 
           )}
         </div>
 
+        {/* ── DANGER ZONE ── */}
+        <div style={{ marginTop: 64, paddingTop: 40, borderTop: '1px solid rgba(255,68,68,0.15)' }}>
+          <p style={{
+            fontFamily: 'var(--font-pixel), monospace',
+            fontSize: 9,
+            color: 'rgba(255,68,68,0.6)',
+            margin: '0 0 20px',
+            letterSpacing: 2,
+          }}>
+            DANGER ZONE
+          </p>
+
+          {/* Vote status — only shown while a deletion request is active */}
+          {pendingVotes.length > 0 && (
+            <div style={{
+              marginBottom: 20,
+              padding: '14px 16px',
+              background: 'rgba(255,68,68,0.04)',
+              border: '1px solid rgba(255,68,68,0.15)',
+            }}>
+              <p style={{
+                fontFamily: 'var(--font-body), sans-serif',
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.45)',
+                margin: '0 0 6px',
+              }}>
+                Deletion request is active
+              </p>
+              <p style={{
+                fontFamily: 'var(--font-pixel), monospace',
+                fontSize: 8,
+                color: 'rgba(255,68,68,0.8)',
+                margin: 0,
+                letterSpacing: 1,
+                lineHeight: 1.8,
+              }}>
+                {agreedCount} OF {pendingVotes.length} MEMBERS HAVE AGREED
+              </p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleDeleteClick}
+            style={{
+              fontFamily: 'var(--font-pixel), monospace',
+              fontSize: 9,
+              color: '#ff4444',
+              background: 'transparent',
+              border: '1px solid rgba(255,68,68,0.35)',
+              padding: '12px 20px',
+              cursor: 'pointer',
+              letterSpacing: 1,
+              transition: 'border-color 150ms, color 150ms',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#ff4444'; e.currentTarget.style.color = '#ff6666' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,68,68,0.35)'; e.currentTarget.style.color = '#ff4444' }}
+          >
+            🗑 DELETE UNIVERSE
+          </button>
+        </div>
+
       </div>
+
+      {/* ── Scenario A: solo owner, no other members ── */}
+      {deleteModal === 'solo' && (
+        <div
+          onClick={() => !deleting && setDeleteModal(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 200,
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#07070d',
+              borderTop: '3px solid #ff4444',
+              padding: '40px 32px',
+              maxWidth: 400,
+              width: '100%',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{
+              fontFamily: 'var(--font-pixel), monospace',
+              fontSize: 12,
+              color: '#ffffff',
+              margin: '0 0 16px',
+              lineHeight: 1.8,
+              letterSpacing: 1,
+            }}>
+              ARE YOU SURE?
+            </p>
+            <p style={{
+              fontFamily: 'var(--font-body), sans-serif',
+              fontSize: 14,
+              color: 'rgba(255,255,255,0.5)',
+              margin: '0 0 32px',
+              lineHeight: 1.8,
+            }}>
+              This universe will be permanently deleted.
+            </p>
+            <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteModal(null)}
+                disabled={deleting}
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 9,
+                  color: 'rgba(255,255,255,0.6)',
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  padding: '12px 24px',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  letterSpacing: 1,
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 9,
+                  color: '#ffffff',
+                  background: '#ff4444',
+                  border: 'none',
+                  padding: '12px 24px',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  letterSpacing: 1,
+                  opacity: deleting ? 0.55 : 1,
+                  transition: 'opacity 150ms',
+                }}
+              >
+                {deleting ? 'DELETING...' : '🗑 DELETE'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Scenario B: has other members — send consent request ── */}
+      {deleteModal === 'members' && (
+        <div
+          onClick={() => !sendingRequest && setDeleteModal(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 200,
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#07070d',
+              borderTop: '3px solid #ff4444',
+              padding: '40px 32px',
+              maxWidth: 420,
+              width: '100%',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{
+              fontFamily: 'var(--font-pixel), monospace',
+              fontSize: 10,
+              color: '#ffffff',
+              margin: '0 0 16px',
+              lineHeight: 1.8,
+              letterSpacing: 1,
+            }}>
+              YOU HAVE MEMBERS IN THIS UNIVERSE
+            </p>
+            <p style={{
+              fontFamily: 'var(--font-body), sans-serif',
+              fontSize: 14,
+              color: 'rgba(255,255,255,0.5)',
+              margin: '0 0 32px',
+              lineHeight: 1.8,
+            }}>
+              All {userMembers.length} member{userMembers.length !== 1 ? 's' : ''} must agree before this universe can be deleted. A deletion request will be sent to each of them.
+            </p>
+            <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteModal(null)}
+                disabled={sendingRequest}
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 9,
+                  color: 'rgba(255,255,255,0.6)',
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  padding: '12px 24px',
+                  cursor: sendingRequest ? 'not-allowed' : 'pointer',
+                  letterSpacing: 1,
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={handleSendDeletionRequest}
+                disabled={sendingRequest}
+                style={{
+                  fontFamily: 'var(--font-pixel), monospace',
+                  fontSize: 8,
+                  color: '#ffffff',
+                  background: '#ff4444',
+                  border: 'none',
+                  padding: '12px 20px',
+                  cursor: sendingRequest ? 'not-allowed' : 'pointer',
+                  letterSpacing: 1,
+                  opacity: sendingRequest ? 0.55 : 1,
+                  transition: 'opacity 150ms',
+                }}
+              >
+                {sendingRequest ? 'SENDING...' : 'SEND DELETION REQUEST →'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }

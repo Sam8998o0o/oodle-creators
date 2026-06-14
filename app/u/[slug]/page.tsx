@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { supabase } from '../../../lib/supabase'
 import UniverseActionButtons from '../../../components/UniverseActionButtons'
 import UniverseCharactersGrid, { type UniverseCharacter } from '../../../components/UniverseCharactersGrid'
+import UniverseDeletionBanner from '../../../components/UniverseDeletionBanner'
 import { formatNumber } from '../../../lib/utils'
 
 /* ── Types ── */
@@ -199,6 +200,9 @@ export default async function UniversePage({ params }: { params: Promise<{ slug:
         >
           ← UNIVERSES
         </Link>
+
+        {/* ── Deletion consent banner (client island, visible only to members with a pending vote) ── */}
+        <UniverseDeletionBanner universeId={universe.id} />
 
         {/* ── Universe header ── */}
         <div style={{ marginBottom: 32 }}>
