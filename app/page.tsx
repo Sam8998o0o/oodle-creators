@@ -3,7 +3,6 @@ import CharacterCard from '../components/CharacterCard'
 import SignInLink from '../components/SignInLink'
 import HeroCTAButton from '../components/HeroCTAButton'
 import PlayOodleButton from '../components/PlayOodleButton'
-import OnboardingTour from '../components/OnboardingTour'
 import HowItWorks from '../components/HowItWorks'
 import { supabase } from '../lib/supabase'
 
@@ -463,7 +462,6 @@ export default async function LandingPage() {
         </span>
       </footer>
 
-      <OnboardingTour />
     </div>
   )
 }
