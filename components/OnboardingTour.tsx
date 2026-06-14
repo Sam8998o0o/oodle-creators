@@ -6,30 +6,34 @@ const STEPS = [
   {
     target: null as string | null,
     title: '✦ WELCOME TO OODLE CREATORS',
-    text: 'Your home for original character IPs. Toys, mascots, healing characters, illustrated stories — share your creation with the world.',
+    text: 'Your home for original character IPs — toys, mascots, healing characters, illustrated stories.',
     button: 'START TOUR →',
+    isFinal: false,
   },
   {
     target: '[data-tour="gallery"]',
     title: '🎨 EXPLORE THE GALLERY',
-    text: 'Browse original characters from creators worldwide. Like and follow the ones you love.',
+    text: 'Browse original characters from creators worldwide.',
     button: 'NEXT →',
+    isFinal: false,
   },
   {
     target: '[data-tour="share-ip"]',
     title: '✦ SHARE YOUR IP',
-    text: 'Upload your character — any style, any format. Get your own public page and start building your fanbase.',
+    text: 'Upload your character and get your own public page.',
     button: 'NEXT →',
+    isFinal: false,
   },
   {
     target: '[data-tour="universes"]',
     title: '🌍 JOIN A UNIVERSE',
-    text: 'Collaborate with other creators. Build shared worlds and grow your community together.',
+    text: 'Build shared worlds with other creators.',
     button: "LET'S GO! →",
+    isFinal: true,
   },
 ]
 
-const TOOLTIP_W = 440
+const TOOLTIP_W = 280
 
 function clearHighlights() {
   document.querySelectorAll<HTMLElement>('[data-tour]').forEach(el => {
@@ -42,27 +46,24 @@ function clearHighlights() {
 }
 
 export default function OnboardingTour() {
-  // `checked` stays false until the localStorage read completes on the client.
-  // This prevents any flash during SSR/hydration and ensures returning users
-  // never see the overlay.
+  // `checked` stays false until the client-side storage read completes.
+  // This prevents any render before we know whether to show the tour.
   const [checked, setChecked] = useState(false)
-  const [active,  setActive]  = useState(false)
+  const [visible, setVisible] = useState(false)
   const [step,    setStep]    = useState(0)
   const [rect,    setRect]    = useState<DOMRect | null>(null)
-  const [opacity, setOpacity] = useState(1)
 
-  // Client-only localStorage check — runs once after hydration
   useEffect(() => {
-    if (!localStorage.getItem('oodle-creators-onboarded')) {
-      setActive(true)
-    }
+    const neverShow      = localStorage.getItem('oodle-creators-no-tour')
+    const skippedSession = sessionStorage.getItem('oodle-creators-tour-skipped')
+    if (!neverShow && !skippedSession) setVisible(true)
     setChecked(true)
   }, [])
 
-  // Apply / remove highlight on the target nav element
+  // Highlight the current step's target nav element
   useEffect(() => {
     clearHighlights()
-    if (!active) return
+    if (!visible) return
 
     const target = STEPS[step].target
     if (!target) { setRect(null); return }
@@ -73,17 +74,18 @@ export default function OnboardingTour() {
     setRect(el.getBoundingClientRect())
     el.style.boxShadow = '0 0 0 3px #FFE600, 0 0 20px rgba(255,230,0,0.4)'
     el.style.position  = 'relative'
-    el.style.zIndex    = '9992'
+    el.style.zIndex    = '9999'
 
+    // Bring the nav visually above the overlay
     const nav = document.querySelector<HTMLElement>('nav')
-    if (nav) nav.style.zIndex = '9992'
+    if (nav) nav.style.zIndex = '9999'
 
     return () => { clearHighlights() }
-  }, [step, active])
+  }, [step, visible])
 
-  // Keep tooltip position in sync with window size
+  // Keep tooltip position correct when the window resizes
   useEffect(() => {
-    if (!active) return
+    if (!visible) return
     const target = STEPS[step].target
     if (!target) return
     function onResize() {
@@ -92,184 +94,287 @@ export default function OnboardingTour() {
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [step, active])
+  }, [step, visible])
 
-  function dismiss() {
+  // Skip: hide for this browser session, show again next visit
+  function skip() {
+    sessionStorage.setItem('oodle-creators-tour-skipped', 'true')
     clearHighlights()
-    localStorage.setItem('oodle-creators-onboarded', 'true')
-    setActive(false)
-    setOpacity(1)   // reset for safety
+    setVisible(false)
+  }
+
+  // Never show: permanent localStorage flag
+  function neverShowAgain() {
+    localStorage.setItem('oodle-creators-no-tour', 'true')
+    clearHighlights()
+    setVisible(false)
   }
 
   function advance() {
-    setOpacity(0)
-    setTimeout(() => {
-      // No mountedRef guard — in React 18 setState on an unmounted component
-      // is a silent no-op, and mountedRef breaks under Strict Mode double-invoke.
-      if (step >= STEPS.length - 1) {
-        dismiss()
-        return
-      }
-      setStep(s => s + 1)
-      // Double rAF: let the browser paint the new content at opacity-0 first
-      requestAnimationFrame(() => requestAnimationFrame(() => setOpacity(1)))
-    }, 150)
+    if (step >= STEPS.length - 1) {
+      skip()   // completing the tour = session-skip (not permanent)
+      return
+    }
+    setStep(s => s + 1)
   }
 
-  // Nothing to render until we've read localStorage (prevents SSR flash),
-  // and nothing to render if the user has already completed the tour.
-  if (!checked || !active) return null
+  // Don't render until storage has been read, and only if the tour should show
+  if (!checked || !visible) return null
 
-  const s       = STEPS[step]
-  const hasRect = rect != null && rect.width > 0 && rect.height > 0
+  const s         = STEPS[step]
+  const isWelcome = step === 0
+  const hasRect   = rect != null && rect.width > 0 && rect.height > 0
 
+  // Tooltip position for steps 1–3
   let tooltipTop  = 0
   let tooltipLeft = 0
   let arrowLeft   = 0
   let showArrow   = false
 
-  if (hasRect) {
-    tooltipTop  = rect.bottom + 16
-    tooltipLeft = Math.max(24, Math.min(
+  if (!isWelcome && hasRect) {
+    tooltipTop  = rect.bottom + 12
+    tooltipLeft = Math.max(16, Math.min(
       rect.left + rect.width / 2 - TOOLTIP_W / 2,
-      window.innerWidth - TOOLTIP_W - 24,
+      window.innerWidth - TOOLTIP_W - 16,
     ))
-    arrowLeft = Math.max(20, Math.min(
+    arrowLeft = Math.max(12, Math.min(
       rect.left + rect.width / 2 - tooltipLeft,
-      TOOLTIP_W - 20,
+      TOOLTIP_W - 12,
     ))
     showArrow = true
   }
 
-  return (
-    <>
-      {/* Visual dark overlay — pointer-events: none so the page stays clickable.
-          The tooltip below is the only interactive surface during the tour. */}
+  /* ── STEP 0: welcome modal — no overlay, no highlight ── */
+  if (isWelcome) {
+    return (
       <div style={{
         position: 'fixed',
-        inset: 0,
-        background: 'rgba(7,7,13,0.85)',
-        zIndex: 9990,
-        pointerEvents: 'none',
-      }} />
-
-      {/* Tooltip */}
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          position: 'fixed',
-          ...(hasRect
-            ? { top: tooltipTop, left: tooltipLeft, width: TOOLTIP_W, maxWidth: 'calc(100vw - 48px)', transform: 'none' }
-            : { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: TOOLTIP_W, maxWidth: 'calc(100vw - 48px)' }
-          ),
-          zIndex: 9993,
-          background: '#07070d',
-          borderTop:    '3px solid #FFE600',
-          borderRight:  '1px solid rgba(255,255,255,0.1)',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-          borderLeft:   '1px solid rgba(255,255,255,0.1)',
-          padding: '28px 28px 20px',
-          opacity,
-          transition: 'opacity 150ms ease',
-        }}
-      >
-        {/* CSS triangle arrow pointing UP toward the highlighted nav element */}
-        {showArrow && (
-          <div style={{
-            position: 'absolute',
-            top: -10,
-            left: arrowLeft,
-            transform: 'translateX(-50%)',
-            width: 0,
-            height: 0,
-            borderLeft:   '9px solid transparent',
-            borderRight:  '9px solid transparent',
-            borderBottom: '10px solid #FFE600',
-          }} />
-        )}
-
-        {/* Title */}
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 9999,
+        background: '#07070d',
+        borderTop:    '3px solid #FFE600',
+        borderRight:  '1px solid rgba(255,255,255,0.1)',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        borderLeft:   '1px solid rgba(255,255,255,0.1)',
+        padding: '40px 36px 32px',
+        width: 480,
+        maxWidth: 'calc(100vw - 48px)',
+        textAlign: 'center',
+      }}>
         <h2 style={{
           fontFamily: 'var(--font-pixel), monospace',
-          fontSize: 11,
+          fontSize: 13,
           color: '#FFE600',
-          margin: '0 0 14px',
+          margin: '0 0 16px',
           lineHeight: 1.8,
           letterSpacing: 1,
         }}>
           {s.title}
         </h2>
 
-        {/* Body */}
         <p style={{
           fontFamily: 'var(--font-body), sans-serif',
-          fontSize: 14,
-          color: 'rgba(255,255,255,0.7)',
+          fontSize: 15,
+          color: 'rgba(255,255,255,0.65)',
           lineHeight: 1.7,
-          margin: '0 0 24px',
+          margin: '0 0 32px',
         }}>
           {s.text}
         </p>
 
-        {/* Footer: progress dots + buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Progress dots */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {STEPS.map((_, i) => (
-              <span key={i} style={{
-                fontSize: i <= step ? 10 : 8,
-                color: i <= step ? '#FFE600' : 'rgba(255,255,255,0.2)',
-                lineHeight: 1,
-                transition: 'color 200ms',
-              }}>
-                {i <= step ? '●' : '○'}
-              </span>
-            ))}
-          </div>
+        <button
+          type="button"
+          onClick={advance}
+          style={{
+            fontFamily: 'var(--font-pixel), monospace',
+            fontSize: 10,
+            color: '#07070d',
+            background: '#FFE600',
+            border: 'none',
+            padding: '14px 28px',
+            cursor: 'pointer',
+            letterSpacing: 1,
+            display: 'block',
+            width: '100%',
+            marginBottom: 16,
+            transition: 'opacity 150ms',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+        >
+          {s.button}
+        </button>
 
-          {/* SKIP + primary action */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={neverShowAgain}
+          style={{
+            fontFamily: 'var(--font-pixel), monospace',
+            fontSize: 7,
+            color: 'rgba(255,255,255,0.25)',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            letterSpacing: 1,
+            transition: 'color 150ms',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}
+        >
+          DON'T SHOW AGAIN
+        </button>
+      </div>
+    )
+  }
+
+  /* ── STEPS 1–3: visual overlay + tooltip ── */
+  return (
+    <>
+      {/* Dark overlay — pointer-events: none so page stays fully interactive */}
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.5)',
+        zIndex: 9998,
+        pointerEvents: 'none',
+      }} />
+
+      {/* Tooltip */}
+      <div style={{
+        position: 'fixed',
+        top:  hasRect ? tooltipTop  : '50%',
+        left: hasRect ? tooltipLeft : '50%',
+        transform: hasRect ? 'none' : 'translate(-50%, -50%)',
+        width: TOOLTIP_W,
+        maxWidth: 'calc(100vw - 32px)',
+        zIndex: 9999,
+        pointerEvents: 'auto',
+        background: '#07070d',
+        borderTop:    '3px solid #FFE600',
+        borderRight:  '1px solid rgba(255,255,255,0.1)',
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        borderLeft:   '1px solid rgba(255,255,255,0.1)',
+        padding: '20px 20px 16px',
+      }}>
+        {/* CSS triangle arrow pointing UP toward the nav element */}
+        {showArrow && (
+          <div style={{
+            position: 'absolute',
+            top: -8,
+            left: arrowLeft,
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft:   '8px solid transparent',
+            borderRight:  '8px solid transparent',
+            borderBottom: '8px solid #FFE600',
+          }} />
+        )}
+
+        {/* Title */}
+        <h3 style={{
+          fontFamily: 'var(--font-pixel), monospace',
+          fontSize: 9,
+          color: '#FFE600',
+          margin: '0 0 10px',
+          lineHeight: 1.8,
+          letterSpacing: 1,
+        }}>
+          {s.title}
+        </h3>
+
+        {/* Body */}
+        <p style={{
+          fontFamily: 'var(--font-body), sans-serif',
+          fontSize: 13,
+          color: 'rgba(255,255,255,0.7)',
+          lineHeight: 1.6,
+          margin: '0 0 14px',
+        }}>
+          {s.text}
+        </p>
+
+        {/* Progress dots */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center' }}>
+          {STEPS.map((_, i) => (
+            <span key={i} style={{
+              fontSize: i <= step ? 9 : 7,
+              color: i <= step ? '#FFE600' : 'rgba(255,255,255,0.2)',
+              lineHeight: 1,
+            }}>
+              {i <= step ? '●' : '○'}
+            </span>
+          ))}
+        </div>
+
+        {/* Footer: SKIP (left) + action button (right) */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            type="button"
+            onClick={skip}
+            style={{
+              fontFamily: 'var(--font-pixel), monospace',
+              fontSize: 7,
+              color: 'rgba(255,255,255,0.3)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              letterSpacing: 1,
+              padding: '6px 0',
+              transition: 'color 150ms',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}
+          >
+            SKIP
+          </button>
+
+          <button
+            type="button"
+            onClick={advance}
+            style={{
+              fontFamily: 'var(--font-pixel), monospace',
+              fontSize: 8,
+              color: '#07070d',
+              background: '#FFE600',
+              border: 'none',
+              padding: '8px 14px',
+              cursor: 'pointer',
+              letterSpacing: 1,
+              transition: 'opacity 150ms',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >
+            {s.button}
+          </button>
+        </div>
+
+        {/* DON'T SHOW AGAIN — only on the final step */}
+        {s.isFinal && (
+          <div style={{ marginTop: 10, textAlign: 'center' }}>
             <button
               type="button"
-              onClick={dismiss}
+              onClick={neverShowAgain}
               style={{
                 fontFamily: 'var(--font-pixel), monospace',
-                fontSize: 7,
-                color: 'rgba(255,255,255,0.35)',
+                fontSize: 6,
+                color: 'rgba(255,255,255,0.2)',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
                 letterSpacing: 1,
-                padding: '8px 4px',
                 transition: 'color 150ms',
               }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.65)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.2)')}
             >
-              SKIP
-            </button>
-
-            <button
-              type="button"
-              onClick={advance}
-              style={{
-                fontFamily: 'var(--font-pixel), monospace',
-                fontSize: 8,
-                color: '#07070d',
-                background: '#FFE600',
-                border: 'none',
-                padding: '10px 18px',
-                cursor: 'pointer',
-                letterSpacing: 1,
-                transition: 'opacity 150ms',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-            >
-              {s.button}
+              DON'T SHOW AGAIN
             </button>
           </div>
-        </div>
+        )}
       </div>
     </>
   )
